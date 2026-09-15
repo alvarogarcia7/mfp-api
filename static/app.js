@@ -37,6 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
         loadToday();
     } else {
         showLogin();
+        loadSavedCredentials();
     }
 
     // Event listeners
@@ -98,6 +99,23 @@ function showDashboard() {
     dashboardScreen.classList.add("active");
 }
 
+function loadSavedCredentials() {
+    const savedUsername = localStorage.getItem("savedUsername");
+    const savedPassword = localStorage.getItem("savedPassword");
+    const savedCookieUsername = localStorage.getItem("savedCookieUsername");
+    const savedCookie = localStorage.getItem("savedCookie");
+
+    if (savedUsername && savedPassword) {
+        usernameInput.value = savedUsername;
+        passwordInput.value = savedPassword;
+    }
+
+    if (savedCookieUsername && savedCookie) {
+        cookieUsernameInput.value = savedCookieUsername;
+        cookieInput.value = savedCookie;
+    }
+}
+
 async function handleLogin(e) {
     e.preventDefault();
     loginError.textContent = "";
@@ -113,6 +131,8 @@ async function handleLogin(e) {
     await performLogin({ username, password }, loginError);
 
     if (sessionId) {
+        localStorage.setItem("savedUsername", username);
+        localStorage.setItem("savedPassword", password);
         usernameInput.value = "";
         passwordInput.value = "";
     }
@@ -138,6 +158,8 @@ async function handleCookieLogin(e) {
     await performLogin({ username, cookie }, cookieError);
 
     if (sessionId) {
+        localStorage.setItem("savedCookieUsername", username);
+        localStorage.setItem("savedCookie", cookie);
         cookieUsernameInput.value = "";
         cookieInput.value = "";
     }
