@@ -27,6 +27,12 @@ app = FastAPI()
 # In-memory session storage: session_id -> CurlCffiClient
 _sessions: dict[str, mfp_client.CurlCffiClient] = {}
 
+# Current logged-in user (optional, None for offline mode)
+_current_user: dict | None = None
+
+# In-memory food entries: {date -> {meal -> [foods]}}
+_food_entries: dict = {}
+
 # Food database file path
 FOOD_DB_FILE = Path(__file__).parent / ".food_cache.json"
 
@@ -60,17 +66,25 @@ def _load_food_schema() -> dict:
         raise RuntimeError(f"Cannot start without food schema: {e}")
 
 
-def get_session_id(authorization: Annotated[str | None, Header()] = None) -> str:
-    """Extract session ID from Authorization header."""
+def get_session_id(authorization: Annotated[str | None, Header()] = None) -> str | None:
+    """Extract session ID from Authorization header.
+
+    Returns None if not provided (offline/local mode).
+    """
     if not authorization:
-        raise HTTPException(status_code=401, detail="Missing authorization")
+        return None
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Invalid authorization format")
     return authorization[7:]
 
 
-def get_client(session_id: str) -> mfp_client.CurlCffiClient:
-    """Look up client from session ID."""
+def get_client(session_id: str | None) -> mfp_client.CurlCffiClient | None:
+    """Look up client from session ID.
+
+    Returns None if no session (offline mode).
+    """
+    if session_id is None:
+        return None
     if session_id not in _sessions:
         raise HTTPException(status_code=401, detail="Session expired")
     return _sessions[session_id]
@@ -156,6 +170,15 @@ async def login(request: dict = Body(...)):
         raise HTTPException(status_code=401, detail=f"Auth failed: {e}")
 
     _sessions[session_id] = client
+
+    # Set current user (global state for logged-in mode)
+    global _current_user
+    _current_user = {
+        "session_id": session_id,
+        "username": mfp_username,
+        "logged_in": True
+    }
+
     logger.info(f"Session created: {session_id} for user: {mfp_username}")
 
     # Save credentials to disk
@@ -170,11 +193,33 @@ async def login(request: dict = Body(...)):
     return {"session_id": session_id, "username": mfp_username}
 
 
+@app.get("/api/status")
+async def get_status():
+    """Get application status: logged in or offline mode."""
+    global _current_user
+    if _current_user:
+        return {
+            "logged_in": True,
+            "username": _current_user.get("username"),
+            "mode": "online"
+        }
+    else:
+        return {
+            "logged_in": False,
+            "username": None,
+            "mode": "offline"
+        }
+
+
 @app.post("/api/logout")
 async def logout(session_id: str = Depends(get_session_id)):
-    """Clear session."""
-    _sessions.pop(session_id, None)
-    return {}
+    """Clear session and switch to offline mode."""
+    if session_id:
+        _sessions.pop(session_id, None)
+
+    global _current_user
+    _current_user = None
+    return {"status": "logged out"}
 
 
 @app.get("/api/today")
@@ -217,29 +262,11 @@ async def get_today(session_id: str = Depends(get_session_id)):
     try:
         result = await asyncio.to_thread(fetch_data)
 
-        # Save entries to disk
-        def save_entries_to_disk():
-            entries_data = _load_entries()
-            today_str = date.today().isoformat()
+        # Save entries to in-memory storage (offline mode)
+        today_str = date.today().isoformat()
+        global _food_entries
+        _food_entries[today_str] = result.get("meals", {})
 
-            # Find and update entry for today, or add new one
-            found = False
-            for entry in entries_data.get("entries", []):
-                if entry.get("date") == today_str:
-                    entry["meals"] = result.get("meals", {})
-                    found = True
-                    break
-
-            if not found:
-                entries_data["entries"].append({
-                    "date": today_str,
-                    "meals": result.get("meals", {}),
-                })
-
-            entries_data["last_updated"] = date.today().isoformat()
-            _save_entries(entries_data)
-
-        await asyncio.to_thread(save_entries_to_disk)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Fetch error: {e}")
@@ -593,6 +620,103 @@ async def get_foods_for_range(
         raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching foods: {e}")
+
+
+@app.get("/api/food-instances")
+async def get_food_instances():
+    """Get all food types in the cache (not entries, but unique foods).
+
+    Returns foods from the local cache database.
+    """
+    try:
+        cached_foods = _load_food_cache()
+        if not cached_foods:
+            return {"foods": [], "count": 0}
+        return {"foods": cached_foods, "count": len(cached_foods)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error loading foods: {e}")
+
+
+@app.get("/api/food-entries")
+async def get_food_entries(date_str: str | None = None):
+    """Get logged food entries from in-memory storage.
+
+    If date_str not provided, returns entries for today.
+    Format: YYYY-MM-DD
+    """
+    global _food_entries
+
+    if date_str is None:
+        date_str = date.today().isoformat()
+
+    try:
+        entries = _food_entries.get(date_str, {})
+        return {
+            "date": date_str,
+            "meals": entries,
+            "has_data": bool(entries)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error loading entries: {e}")
+
+
+@app.post("/api/food-entries/add")
+async def add_food_entry(request: dict = Body(...), session_id: str = Depends(get_session_id)):
+    """Add a food entry to today's log.
+
+    Works both online (syncs to MFP) and offline (stores locally).
+    """
+    global _food_entries
+
+    date_str = request.get("date", date.today().isoformat())
+    meal = request.get("meal", "snacks")
+    food_id = request.get("food_id")
+    weight_id = request.get("weight_id")
+    quantity = request.get("quantity", 1.0)
+
+    if not food_id or not weight_id:
+        raise HTTPException(status_code=400, detail="Missing food_id or weight_id")
+
+    try:
+        # Online mode: sync with MFP
+        if session_id:
+            client = get_client(session_id)
+            if client:
+                def log_to_mfp():
+                    csrf = request.get("csrf")
+                    if not csrf:
+                        _, csrf = diary.diary_page(client, date.fromisoformat(date_str))
+                    return diary.add_food_to_diary(
+                        client, food_id, weight_id, csrf, meal,
+                        date.fromisoformat(date_str), float(quantity)
+                    )
+                await asyncio.to_thread(log_to_mfp)
+
+        # Store entry in local memory
+        if date_str not in _food_entries:
+            _food_entries[date_str] = {
+                "breakfast": [], "lunch": [], "dinner": [], "snacks": []
+            }
+
+        entry = {
+            "name": request.get("name", f"Food {food_id}"),
+            "calories": request.get("calories", 0),
+            "quantity": quantity,
+            "food_id": food_id,
+            "weight_id": weight_id,
+            "timestamp": date.today().isoformat()
+        }
+
+        if meal not in _food_entries[date_str]:
+            _food_entries[date_str][meal] = []
+
+        _food_entries[date_str][meal].append(entry)
+        logger.info(f"Added food entry: {entry['name']} to {meal} on {date_str}")
+
+        return {"success": True, "entry": entry}
+    except Exception as e:
+        logger.error(f"Error adding food entry: {e}")
+        raise HTTPException(status_code=500, detail=f"Error adding entry: {e}")
 
 
 # Mount static files (frontend)

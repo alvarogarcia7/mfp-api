@@ -1,80 +1,93 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Food Database Schema",
-  "description": "Schema for food items stored in the local database",
+  "title": "Food Cache Schema",
+  "description": "Schema for food items in the local cache database",
   "type": "object",
   "properties": {
     "name": {
       "type": "string",
-      "description": "Food item name",
+      "description": "Food item name with brand and package size",
       "minLength": 1,
       "maxLength": 500
     },
+    "measurement": {
+      "type": "object",
+      "description": "Standard measurement for this food",
+      "properties": {
+        "unit": {
+          "type": "string",
+          "description": "Measurement unit (g or ml)",
+          "enum": ["g", "ml"]
+        },
+        "value": {
+          "type": "number",
+          "description": "Measurement value",
+          "minimum": 0.1,
+          "maximum": 10000
+        }
+      },
+      "required": ["unit", "value"],
+      "additionalProperties": false
+    },
     "calories": {
       "type": "number",
-      "description": "Calories per standard serving (in grams/ml)",
+      "description": "Calories per measurement unit",
       "minimum": 0,
       "maximum": 1000000
     },
     "protein": {
-      "type": ["number", "null"],
+      "type": "number",
       "description": "Protein in grams",
       "minimum": 0,
       "maximum": 1000
     },
     "carbs": {
-      "type": ["number", "null"],
+      "type": "number",
       "description": "Carbohydrates in grams",
       "minimum": 0,
       "maximum": 1000
     },
     "fat": {
-      "type": ["number", "null"],
+      "type": "number",
       "description": "Fat in grams",
       "minimum": 0,
       "maximum": 1000
     },
     "fiber": {
-      "type": ["number", "null"],
+      "type": "number",
       "description": "Dietary fiber in grams",
       "minimum": 0,
       "maximum": 1000
     },
     "sugar": {
-      "type": ["number", "null"],
+      "type": "number",
       "description": "Sugar in grams",
       "minimum": 0,
       "maximum": 1000
     },
     "sodium": {
-      "type": ["number", "null"],
+      "type": "number",
       "description": "Sodium in milligrams",
       "minimum": 0,
       "maximum": 1000000
     },
     "cholesterol": {
-      "type": ["number", "null"],
+      "type": "number",
       "description": "Cholesterol in milligrams",
       "minimum": 0,
       "maximum": 1000
     },
     "saturated_fat": {
-      "type": ["number", "null"],
+      "type": "number",
       "description": "Saturated fat in grams",
       "minimum": 0,
       "maximum": 1000
     },
     "potassium": {
-      "type": ["number", "null"],
+      "type": "number",
       "description": "Potassium in milligrams",
       "minimum": 0,
       "maximum": 1000000
-    },
-    "unit": {
-      "type": "string",
-      "description": "Measurement unit (typically grams or milliliters)",
-      "enum": ["g", "ml"],
-      "default": "g"
     },
     "food_id": {
       "type": ["string", "null"],
@@ -103,6 +116,6 @@
       "maxLength": 200
     }
   },
-  "required": ["name", "calories", "unit"],
+  "required": ["name", "measurement", "calories", "protein", "carbs", "fat", "fiber", "sugar", "sodium", "cholesterol", "saturated_fat", "potassium"],
   "additionalProperties": false
 }

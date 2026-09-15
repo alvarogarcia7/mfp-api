@@ -8,164 +8,164 @@
 </head>
 <body>
     <div id="app">
-        <div id="login-screen" class="screen active">
-            <div class="login-container">
-                <h1>MyFitnessPal</h1>
-
-                <!-- Login Method Tabs -->
-                <div class="login-tabs">
-                    <button class="tab-btn active" data-tab="password">Username/Password</button>
-                    <button class="tab-btn" data-tab="cookie">Session Cookie</button>
-                </div>
-
-                <!-- Password Login Form -->
-                <form id="login-form" class="login-tab active" data-tab="password">
-                    <input type="text" id="username" placeholder="Username or Email" required>
-                    <input type="password" id="password" placeholder="Password" required>
-                    <button type="submit">Log In</button>
-                    <div id="login-error" class="error"></div>
-                </form>
-
-                <!-- Cookie Login Form -->
-                <form id="cookie-form" class="login-tab" data-tab="cookie">
-                    <input type="text" id="cookie-username" placeholder="MyFitnessPal Username" required>
-                    <label for="cookie-input">Session Cookie</label>
-                    <textarea id="cookie-input" placeholder="Paste your __Secure-next-auth.session-token cookie value or full Cookie header" rows="4" required></textarea>
-                    <p class="help-text">Get your cookie by:</p>
-                    <ol class="help-text">
-                        <li>Open MyFitnessPal in your browser</li>
-                        <li>Open DevTools (F12) → Application/Storage → Cookies</li>
-                        <li>Find <code>__Secure-next-auth.session-token</code></li>
-                        <li>Copy the value and paste it here</li>
-                    </ol>
-                    <button type="submit">Log In with Cookie</button>
-                    <div id="cookie-error" class="error"></div>
-                </form>
-            </div>
-        </div>
-
-        <div id="dashboard-screen" class="screen">
+        <!-- Main Dashboard -->
+        <div id="dashboard-screen" class="screen active">
             <div class="header">
-                <h1>MyFitnessPal</h1>
-                <button id="logout-btn" class="logout-btn">Log Out</button>
+                <h1>MyFitnessPal Food Tracker</h1>
+                <div class="header-right">
+                    <span id="status-badge" class="status-badge offline">Offline</span>
+                    <button id="logout-btn" class="logout-btn" style="display: none;">Log Out</button>
+                </div>
+            </div>
+
+            <!-- Tab Navigation -->
+            <div class="tab-navigation">
+                <button class="tab-nav-btn active" data-tab="food-instances">Food Library</button>
+                <button class="tab-nav-btn" data-tab="food-entries">Today's Entries</button>
+                <button class="tab-nav-btn" data-tab="login">Login (Optional)</button>
             </div>
 
             <div class="dashboard">
-                <!-- Calorie Summary -->
-                <div class="calorie-summary">
-                    <div class="date-header" id="date-header"></div>
-                    <div class="calorie-bar">
-                        <div class="bar-labels">
-                            <span id="eaten-label">0</span>
-                            <span id="goal-label">2000</span>
+                <!-- Food Instances Tab -->
+                <div id="food-instances-tab" class="tab-content active">
+                    <h2>Food Library</h2>
+                    <p class="tab-description">All available foods in your local database</p>
+                    <div id="food-instances-list" class="food-list">
+                        <div class="loading">Loading food database...</div>
+                    </div>
+                    <div id="food-instances-count" class="count-badge"></div>
+                </div>
+
+                <!-- Food Entries Tab -->
+                <div id="food-entries-tab" class="tab-content">
+                    <h2>Today's Food Log</h2>
+                    <div class="date-selector">
+                        <input type="date" id="entry-date" />
+                        <button id="load-date-btn" class="action-btn">Load</button>
+                    </div>
+
+                    <!-- Calorie Summary (only when logged in) -->
+                    <div id="calorie-summary" class="calorie-summary" style="display: none;">
+                        <div class="date-header" id="date-header"></div>
+                        <div class="calorie-bar">
+                            <div class="bar-labels">
+                                <span id="eaten-label">0</span>
+                                <span id="goal-label">2000</span>
+                            </div>
+                            <div class="bar-container">
+                                <div id="eaten-bar" class="eaten-bar"></div>
+                                <div id="goal-marker" class="goal-marker"></div>
+                            </div>
                         </div>
-                        <div class="bar-container">
-                            <div id="eaten-bar" class="eaten-bar"></div>
-                            <div id="goal-marker" class="goal-marker"></div>
+                        <div class="calorie-stats">
+                            <div class="stat">
+                                <span class="label">Eaten</span>
+                                <span id="eaten-val" class="value">0</span>
+                            </div>
+                            <div class="stat">
+                                <span class="label">Exercise</span>
+                                <span id="exercise-val" class="value">0</span>
+                            </div>
+                            <div class="stat">
+                                <span class="label">Remaining</span>
+                                <span id="remaining-val" class="value">2000</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="calorie-stats">
-                        <div class="stat">
-                            <span class="label">Eaten</span>
-                            <span id="eaten-val" class="value">0</span>
+
+                    <!-- Food Input -->
+                    <div class="food-input-section">
+                        <div class="meal-selector">
+                            <label for="meal-select">Meal:</label>
+                            <select id="meal-select">
+                                <option value="breakfast">Breakfast</option>
+                                <option value="lunch">Lunch</option>
+                                <option value="dinner">Dinner</option>
+                                <option value="snacks">Snacks</option>
+                            </select>
                         </div>
-                        <div class="stat">
-                            <span class="label">Exercise</span>
-                            <span id="exercise-val" class="value">0</span>
+                        <div class="input-row">
+                            <textarea id="food-input" placeholder='Enter food name:&#10;chicken breast&#10;apple' rows="3"></textarea>
+                            <button id="search-btn">Search</button>
                         </div>
-                        <div class="stat">
-                            <span class="label">Remaining</span>
-                            <span id="remaining-val" class="value">2000</span>
+                    </div>
+
+                    <!-- Search Results -->
+                    <div id="search-results" class="search-results" style="display: none;">
+                        <div class="results-header">
+                            <h3>Food Matches:</h3>
+                            <div class="results-actions">
+                                <button id="select-all-btn" class="action-btn">Select All</button>
+                                <button id="deselect-all-btn" class="action-btn">Deselect All</button>
+                                <button id="add-all-btn" class="action-btn primary">Add All</button>
+                            </div>
+                        </div>
+                        <div id="results-list"></div>
+                    </div>
+
+                    <!-- Meal Entries -->
+                    <div class="food-log">
+                        <h2>Logged Foods</h2>
+                        <div id="meals-container">
+                            <div class="meal-group">
+                                <h3>Breakfast</h3>
+                                <ul id="breakfast-entries" class="entries"></ul>
+                            </div>
+                            <div class="meal-group">
+                                <h3>Lunch</h3>
+                                <ul id="lunch-entries" class="entries"></ul>
+                            </div>
+                            <div class="meal-group">
+                                <h3>Dinner</h3>
+                                <ul id="dinner-entries" class="entries"></ul>
+                            </div>
+                            <div class="meal-group">
+                                <h3>Snacks</h3>
+                                <ul id="snacks-entries" class="entries"></ul>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Food Input -->
-                <div class="food-input-section">
-                    <div class="meal-selector">
-                        <label for="meal-select">Meal:</label>
-                        <select id="meal-select">
-                            <option value="breakfast">Breakfast</option>
-                            <option value="lunch">Lunch</option>
-                            <option value="dinner">Dinner</option>
-                            <option value="snacks">Snacks</option>
-                        </select>
-                    </div>
-                    <div class="input-row">
-                        <textarea id="food-input" placeholder='Enter foods one per line:&#10;lettuce 85&#10;tomato 100&#10;chicken breast 150g' rows="4"></textarea>
-                        <button id="search-btn">Search</button>
-                    </div>
-                </div>
+                <!-- Login Tab -->
+                <div id="login-tab" class="tab-content">
+                    <div class="login-container login-minimal">
+                        <h2>Connect to MyFitnessPal (Optional)</h2>
+                        <p class="tab-description">Login to sync your food data with MyFitnessPal and see calorie goals</p>
 
-                <!-- Search Results -->
-                <div id="search-results" class="search-results" style="display: none;">
-                    <div class="results-header">
-                        <h3>Food Matches:</h3>
-                        <div class="results-actions">
-                            <button id="select-all-btn" class="action-btn">Select All</button>
-                            <button id="deselect-all-btn" class="action-btn">Deselect All</button>
-                            <button id="add-all-btn" class="action-btn primary">Add All to Diary</button>
+                        <!-- Login Method Tabs -->
+                        <div class="login-tabs">
+                            <button class="tab-btn active" data-subtab="password">Username/Password</button>
+                            <button class="tab-btn" data-subtab="cookie">Session Cookie</button>
                         </div>
-                    </div>
-                    <div id="results-list"></div>
-                </div>
 
-                <!-- Food Log -->
-                <div class="food-log">
-                    <h2>Today's Log</h2>
-                    <div id="meals-container">
-                        <div class="meal-group">
-                            <h3>Breakfast</h3>
-                            <ul id="breakfast-entries" class="entries"></ul>
-                        </div>
-                        <div class="meal-group">
-                            <h3>Lunch</h3>
-                            <ul id="lunch-entries" class="entries"></ul>
-                        </div>
-                        <div class="meal-group">
-                            <h3>Dinner</h3>
-                            <ul id="dinner-entries" class="entries"></ul>
-                        </div>
-                        <div class="meal-group">
-                            <h3>Snacks</h3>
-                            <ul id="snacks-entries" class="entries"></ul>
-                        </div>
+                        <!-- Password Login Form -->
+                        <form id="login-form" class="login-tab active" data-subtab="password">
+                            <input type="text" id="username" placeholder="Username or Email" required>
+                            <input type="password" id="password" placeholder="Password" required>
+                            <button type="submit">Log In</button>
+                            <div id="login-error" class="error"></div>
+                        </form>
+
+                        <!-- Cookie Login Form -->
+                        <form id="cookie-form" class="login-tab" data-subtab="cookie">
+                            <input type="text" id="cookie-username" placeholder="MyFitnessPal Username" required>
+                            <label for="cookie-input">Session Cookie</label>
+                            <textarea id="cookie-input" placeholder="Paste your __Secure-next-auth.session-token cookie value" rows="4" required></textarea>
+                            <p class="help-text">Get your cookie by:</p>
+                            <ol class="help-text">
+                                <li>Open MyFitnessPal in your browser</li>
+                                <li>Open DevTools (F12) → Application/Storage → Cookies</li>
+                                <li>Find <code>__Secure-next-auth.session-token</code></li>
+                                <li>Copy the value and paste it here</li>
+                            </ol>
+                            <button type="submit">Log In with Cookie</button>
+                            <div id="cookie-error" class="error"></div>
+                        </form>
+
+                        <div class="login-status" id="login-status"></div>
                     </div>
                 </div>
-
-                <button id="refresh-btn" class="refresh-btn">Refresh</button>
-                <button id="load-more-foods-btn" class="action-btn" style="width: 100%; margin-top: 10px;">Load More Foods</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Load More Foods Modal -->
-    <div id="load-foods-modal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Load Foods from Date Range</h2>
-                <button id="close-modal-btn" class="modal-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="modal-section">
-                    <label for="foods-start-date">Start Date:</label>
-                    <input type="date" id="foods-start-date">
-                </div>
-                <div class="modal-section">
-                    <label for="foods-end-date">End Date:</label>
-                    <input type="date" id="foods-end-date">
-                </div>
-                <div class="modal-section">
-                    <label>Quick Options:</label>
-                    <div class="quick-buttons">
-                        <button id="quick-1-week" class="quick-btn">1 Week Before End Date</button>
-                        <button id="quick-1-month" class="quick-btn">1 Month Before End Date</button>
-                    </div>
-                </div>
-                <div class="modal-section">
-                    <button id="load-foods-confirm" class="action-btn primary" style="width: 100%;">Load Foods</button>
-                </div>
-                <div id="load-foods-status" style="margin-top: 10px; text-align: center; font-size: 12px; color: #999;"></div>
             </div>
         </div>
     </div>

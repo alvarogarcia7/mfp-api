@@ -684,6 +684,199 @@ body {
     border-color: #667eea;
 }
 
+/* Tab Navigation */
+.tab-navigation {
+    display: flex;
+    gap: 0;
+    background: white;
+    border-bottom: 2px solid #eee;
+    padding: 0 20px;
+}
+
+.tab-nav-btn {
+    padding: 15px 20px;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: #999;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex: 0 1 auto;
+}
+
+.tab-nav-btn:hover {
+    color: #667eea;
+}
+
+.tab-nav-btn.active {
+    color: #667eea;
+    border-bottom-color: #667eea;
+}
+
+/* Tab Content */
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.tab-description {
+    color: #999;
+    font-size: 14px;
+    margin-bottom: 20px;
+}
+
+/* Status Badge */
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.status-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-badge.online {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-badge.offline {
+    background: #fff3cd;
+    color: #856404;
+}
+
+/* Login Container in Tab */
+.login-container.login-minimal {
+    background: none;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    max-width: 100%;
+    margin: 0;
+}
+
+.login-container.login-minimal h2 {
+    color: #333;
+    font-size: 24px;
+    margin-bottom: 10px;
+}
+
+.login-minimal .login-tabs {
+    margin-top: 30px;
+}
+
+/* Food List */
+.food-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.food-item {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #eee;
+    transition: all 0.2s;
+}
+
+.food-item:hover {
+    border-color: #667eea;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+}
+
+.food-item-name {
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+.food-item-meta {
+    font-size: 12px;
+    color: #999;
+    line-height: 1.6;
+}
+
+.food-item-nutrition {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.nutrition-stat {
+    font-size: 11px;
+    color: #666;
+}
+
+.nutrition-value {
+    font-weight: 600;
+    color: #667eea;
+}
+
+.count-badge {
+    text-align: center;
+    padding: 10px;
+    background: #f0f7ff;
+    border-radius: 4px;
+    color: #667eea;
+    font-weight: 600;
+}
+
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: #999;
+}
+
+.date-selector {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.date-selector input[type="date"] {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.date-selector button {
+    padding: 8px 16px;
+}
+
+.login-status {
+    margin-top: 20px;
+    padding: 10px;
+    border-radius: 4px;
+    text-align: center;
+    font-size: 14px;
+}
+
+.login-status.success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.login-status.error {
+    background: #f8d7da;
+    color: #721c24;
+}
+
 @media (max-width: 600px) {
     .dashboard {
         padding: 0 10px;
