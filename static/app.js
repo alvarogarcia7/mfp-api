@@ -29,6 +29,9 @@ const refreshBtn = document.getElementById("refresh-btn");
 // Store current food items being processed
 let currentFoodItems = [];
 
+// Store debug info from server responses
+let entryDebugInfo = {};
+
 // Initialize
 document.addEventListener("DOMContentLoaded", () => {
     sessionId = localStorage.getItem("sessionId");
@@ -274,6 +277,17 @@ function updateDashboard(data) {
                 if (isExcessive) {
                     li.classList.add("excessive-entry");
                 }
+
+                // Add debug info if available
+                const debugKeys = Object.keys(entryDebugInfo);
+                if (debugKeys.length > 0) {
+                    const debugDiv = document.createElement("div");
+                    debugDiv.className = "entry-debug";
+                    debugDiv.textContent = JSON.stringify(entryDebugInfo[debugKeys[debugKeys.length - 1]], null, 2);
+                    li.appendChild(debugDiv);
+                    debugKeys.pop();
+                }
+
                 entryList.appendChild(li);
             });
         }
@@ -497,6 +511,11 @@ async function logFood(foodId, weightId, quantity, csrf = null) {
         });
 
         if (!response.ok) throw new Error("Failed to log food");
+
+        const data = await response.json();
+        const key = `${foodId}_${Date.now()}`;
+        entryDebugInfo[key] = data;
+        console.log("Food logged:", data);
     } catch (err) {
         alert(`Error logging food: ${err.message}`);
     }
