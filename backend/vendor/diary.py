@@ -61,7 +61,7 @@ def _result_extras(anchor) -> dict:
 def food_search(client, query: str):
     """Returns (results, csrf_token) scraped from the legacy web search page.
 
-    Each result: {food_id, weight_id, name, external_id, brand, calories} —
+    Each result: {food_id, weight_id, all_weight_ids, name, external_id, brand, calories} —
     food_id/weight_id feed /food/add; external_id feeds the v2 details API.
     """
     url = parse.urljoin(
@@ -79,6 +79,7 @@ def food_search(client, query: str):
         result = {
             "food_id": anchor.get("data-original-id"),
             "weight_id": weight_ids[0],
+            "all_weight_ids": weight_ids,
             "name": anchor.text_content().strip(),
         }
         result.update(_result_extras(anchor))
@@ -95,10 +96,51 @@ def _serving_label(serving_sizes: list) -> str | None:
     return f"{first.get('value')} {first.get('unit')}".strip()
 
 
+def _get_gram_weight_id(client, external_id: str, available_weight_ids: list[str]) -> str | None:
+    """Get the weight_id for grams measurement from MFP v2 API.
+
+    Returns the weight_id for 100g (or closest gram measurement), or None if not available.
+    """
+    if not external_id or not available_weight_ids:
+        return None
+
+    try:
+        details = client._get_food_item_details(int(external_id))
+        serving_sizes = details.get("serving_sizes", [])
+
+        for serving in serving_sizes:
+            unit = serving.get("unit", "").lower()
+            if unit == "g":
+                serving_id = serving.get("id")
+                if serving_id and str(serving_id) in available_weight_ids:
+                    return str(serving_id)
+
+        return None
+    except Exception:
+        return None
+
+
 def search_food(client, query: str, limit: int = 5, with_macros: bool = True) -> list[dict]:
     results, _ = food_search(client, query)
     candidates = []
     for result in results[:limit]:
+        # Extract all available weight_ids
+        all_weight_ids = [w for w in result.get("all_weight_ids", []) if w]
+        if not all_weight_ids and result["weight_id"]:
+            all_weight_ids = [result["weight_id"]]
+
+        # Try to find gram weight_id
+        gram_weight_id = None
+        if result["external_id"]:
+            gram_weight_id = _get_gram_weight_id(client, result["external_id"], all_weight_ids)
+
+        # Skip this candidate if it doesn't have a gram measurement
+        if not gram_weight_id and with_macros:
+            continue
+
+        # Use gram weight_id if found, otherwise use the provided weight_id
+        weight_id_to_use = gram_weight_id or result["weight_id"]
+
         candidate = {
             "name": result["name"],
             "brand": result["brand"],
@@ -109,7 +151,7 @@ def search_food(client, query: str, limit: int = 5, with_macros: bool = True) ->
             "serving": None,
             "verified": None,
             "food_id": result["food_id"],
-            "weight_id": result["weight_id"],
+            "weight_id": weight_id_to_use,
         }
         if with_macros and result["external_id"]:
             try:
