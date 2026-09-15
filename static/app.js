@@ -553,10 +553,11 @@ async function handleSearch() {
     if (lines.length === 0) return;
 
     try {
-        console.log("\n🔍 SEARCHING: Local database first, then MFP API");
+        console.log("\n🔍 SEARCHING: Local database only");
 
         if (!dbInitialized || localFoodDatabase.length === 0) {
-            console.warn("⚠️ Local database not initialized, using MFP API");
+            alert("⚠️ Food database not loaded. Please wait and try again.");
+            return;
         }
 
         // Search for all food items
@@ -566,42 +567,14 @@ async function handleSearch() {
             const parsed = parseInput(line);
             console.log(`\n🔍 SEARCHING FOR: ${parsed.name} (${parsed.quantity}${parsed.unit})`);
 
-            // Try local database first
-            console.log("📚 Searching local database first...");
+            // Search local database only
+            console.log("📚 Searching local database...");
             let results = searchLocalFoods(parsed.name);
 
             if (results.length > 0) {
                 console.log(`✅ Found ${results.length} results in local database`);
                 console.log("🥇 Top result:", results[0]);
-            } else {
-                // Fallback to MFP API search
-                console.log("⚠️ Not found locally, querying MFP API...");
-                try {
-                    const response = await fetch("/api/search", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "Authorization": `Bearer ${sessionId}`,
-                        },
-                        body: JSON.stringify({ query: parsed.name }),
-                    });
 
-                    if (response.ok) {
-                        const data = await response.json();
-                        results = data.results || [];
-                        console.log(`✅ Found ${results.length} results from MFP API`);
-                        if (results.length > 0) {
-                            console.log("🥇 Top result:", results[0]);
-                        }
-                    } else {
-                        console.warn(`⚠️ MFP API search failed: ${response.status}`);
-                    }
-                } catch (err) {
-                    console.warn("⚠️ MFP API search error:", err);
-                }
-            }
-
-            if (results.length > 0) {
                 // Convert results to compatible format
                 const formattedResults = results.map(food => ({
                     name: food.name,
@@ -621,14 +594,14 @@ async function handleSearch() {
                     selected: formattedResults[0], // Pre-select first (most likely)
                 });
             } else {
-                console.warn(`⚠️ No results found for "${parsed.name}"`);
+                console.warn(`⚠️ No results found in local database for "${parsed.name}"`);
             }
         }
 
         if (currentFoodItems.length > 0) {
             showResults();
         } else {
-            alert("No foods found. Try a different search term.");
+            alert("No foods found in local database. Use 'Load More Foods' to expand the database.");
         }
     } catch (err) {
         console.error("❌ Search error:", err);
