@@ -24,26 +24,22 @@ myfitnesspal-api/
 
 ### Prerequisites
 - Python 3.10 or higher
-- `uv` for dependency management
-
-### Install uv
-
-```bash
-pip install uv
-```
+- `uv` for dependency management (`pip install uv`)
 
 ### Install Project Dependencies
 
-Using Make:
+Using Make (Recommended):
 ```bash
 make install
 ```
 
-Or manually:
+Or manually with uv:
 ```bash
 uv pip install -e .        # Install production dependencies
 uv pip install -e ".[dev]" # Install dev dependencies including tests
 ```
+
+All dependencies are managed in the root `pyproject.toml` file. Both backend and tests use the same dependency configuration through uv.
 
 **Note**: `curl-cffi` requires a C compiler. On some systems, you may need:
 - Ubuntu/Debian: `sudo apt-get install build-essential python3-dev`

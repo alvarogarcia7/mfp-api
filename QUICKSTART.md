@@ -32,20 +32,21 @@ Open your browser to **http://localhost:8000**
 ## Common Commands
 
 ```bash
-# Using Makefile
-make run           # Start development server with auto-reload
-make test          # Run tests
+# Using Makefile (Recommended)
+make help          # Show all available targets
 make install       # Install all dependencies (dev + prod)
-make install-prod  # Install only production dependencies
+make run           # Start development server (auto-reload, random port)
+make test          # Run test suite
 make clean         # Clean build artifacts
 make lint          # Check Python syntax
-make help          # Show all available targets
 
-# Manual commands
+# Manual commands with uv
 uv pip install -e .          # Install production dependencies
 uv pip install -e ".[dev]"   # Install dev dependencies
 pytest tests/                # Run tests directly
 ```
+
+All dependencies are defined in `pyproject.toml` and managed by `uv`.
 
 ## How Food Input Works
 
