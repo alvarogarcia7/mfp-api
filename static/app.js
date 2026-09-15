@@ -553,28 +553,55 @@ async function handleSearch() {
     if (lines.length === 0) return;
 
     try {
-        console.log("\n🔍 SEARCHING LOCAL DATABASE ONLY");
+        console.log("\n🔍 SEARCHING: Local database first, then MFP API");
 
         if (!dbInitialized || localFoodDatabase.length === 0) {
-            alert("Food database not initialized. Please log in again.");
-            return;
+            console.warn("⚠️ Local database not initialized, using MFP API");
         }
 
-        // Search for all food items in local database ONLY
+        // Search for all food items
         currentFoodItems = [];
 
         for (const line of lines) {
             const parsed = parseInput(line);
             console.log(`\n🔍 SEARCHING FOR: ${parsed.name} (${parsed.quantity}${parsed.unit})`);
-            console.log("📚 Searching local database (no MFP API calls)...");
 
-            // Search ONLY local database - never query MFP API
-            const results = searchLocalFoods(parsed.name);
-
-            console.log(`✅ Found ${results.length} results in local database`);
+            // Try local database first
+            console.log("📚 Searching local database first...");
+            let results = searchLocalFoods(parsed.name);
 
             if (results.length > 0) {
+                console.log(`✅ Found ${results.length} results in local database`);
                 console.log("🥇 Top result:", results[0]);
+            } else {
+                // Fallback to MFP API search
+                console.log("⚠️ Not found locally, querying MFP API...");
+                try {
+                    const response = await fetch("/api/search", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${sessionId}`,
+                        },
+                        body: JSON.stringify({ query: parsed.name }),
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        results = data.results || [];
+                        console.log(`✅ Found ${results.length} results from MFP API`);
+                        if (results.length > 0) {
+                            console.log("🥇 Top result:", results[0]);
+                        }
+                    } else {
+                        console.warn(`⚠️ MFP API search failed: ${response.status}`);
+                    }
+                } catch (err) {
+                    console.warn("⚠️ MFP API search error:", err);
+                }
+            }
+
+            if (results.length > 0) {
                 // Convert results to compatible format
                 const formattedResults = results.map(food => ({
                     name: food.name,
@@ -582,8 +609,8 @@ async function handleSearch() {
                     protein: food.protein,
                     carbs: food.carbs,
                     fat: food.fat,
-                    food_id: `local_${food.name.replace(/\s+/g, '_')}`,
-                    weight_id: "100",  // Standard: 100g
+                    food_id: food.food_id,
+                    weight_id: food.weight_id,
                 }));
 
                 // Store with metadata
@@ -594,14 +621,14 @@ async function handleSearch() {
                     selected: formattedResults[0], // Pre-select first (most likely)
                 });
             } else {
-                console.warn(`⚠️ No results found for "${parsed.name}" in local database`);
+                console.warn(`⚠️ No results found for "${parsed.name}"`);
             }
         }
 
         if (currentFoodItems.length > 0) {
             showResults();
         } else {
-            alert("No foods found in local database. Add more entries to MyFitnessPal to expand the database.");
+            alert("No foods found. Try a different search term.");
         }
     } catch (err) {
         console.error("❌ Search error:", err);
