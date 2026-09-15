@@ -427,6 +427,59 @@ def _save_food_cache(foods: list[dict]) -> None:
         raise
 
 
+def _fetch_foods_for_range(client, start_date: date, end_date: date) -> list[dict]:
+    """Fetch unique foods from diary entries in a date range.
+
+    Returns a list of unique foods by name, extracted from MFP diary entries.
+    """
+    from datetime import timedelta
+
+    foods_map = {}  # Use dict to deduplicate by food name
+
+    # Fetch diary entries for the date range
+    current = end_date
+    while current >= start_date:
+        try:
+            mfp_day = client.get_date(current)
+
+            for meal in mfp_day.meals:
+                for entry in meal.entries:
+                    name = entry.name
+                    calories = _safe_float(entry.totals.get("calories"))
+                    protein = _safe_float(entry.totals.get("protein"))
+                    carbs = _safe_float(entry.totals.get("carbohydrates"))
+                    fat = _safe_float(entry.totals.get("fat"))
+                    fiber = _safe_float(entry.totals.get("fiber"))
+                    sugar = _safe_float(entry.totals.get("sugar"))
+                    sodium = _safe_float(entry.totals.get("sodium"))
+                    cholesterol = _safe_float(entry.totals.get("cholesterol"))
+                    saturated_fat = _safe_float(entry.totals.get("saturated_fat"))
+                    potassium = _safe_float(entry.totals.get("potassium"))
+
+                    # Skip if already have this food (take first occurrence)
+                    if name not in foods_map:
+                        foods_map[name] = {
+                            "name": name,
+                            "measurement": {"unit": "g", "value": 100},
+                            "calories": calories,
+                            "protein": protein,
+                            "carbs": carbs,
+                            "fat": fat,
+                            "fiber": fiber,
+                            "sugar": sugar,
+                            "sodium": sodium,
+                            "cholesterol": cholesterol,
+                            "saturated_fat": saturated_fat,
+                            "potassium": potassium,
+                        }
+        except Exception as e:
+            logger.warning(f"Error fetching foods for {current}: {e}")
+
+        current -= timedelta(days=1)
+
+    return list(foods_map.values())
+
+
 def _load_entries() -> dict:
     """Load diary entries from JSON file."""
     if not ENTRIES_FILE.exists():
@@ -645,6 +698,41 @@ async def get_food_instances():
         return {"foods": cached_foods, "count": len(cached_foods)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error loading foods: {e}")
+
+
+@app.get("/api/foods/range")
+async def get_foods_for_range(
+    start_date: str,
+    end_date: str,
+    session_id: str = Depends(get_session_id)
+):
+    """Fetch foods from a custom date range (format: YYYY-MM-DD).
+
+    Does not use or update the cache. Useful for loading additional foods.
+    Requires an active MFP session.
+    """
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Login required to load foods from MFP")
+
+    client = get_client(session_id)
+
+    try:
+        start = date.fromisoformat(start_date)
+        end = date.fromisoformat(end_date)
+
+        if start > end:
+            raise HTTPException(status_code=400, detail="start_date must be before end_date")
+
+        logger.info(f"Fetching foods from {start} to {end}")
+        foods = await asyncio.to_thread(_fetch_foods_for_range, client, start, end)
+        logger.info(f"Fetched {len(foods)} foods for range {start} to {end}")
+
+        return {"foods": foods, "date_range": {"start": start_date, "end": end_date}}
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    except Exception as e:
+        logger.error(f"Error fetching foods for range: {e}")
+        raise HTTPException(status_code=500, detail=f"Error fetching foods: {e}")
 
 
 @app.get("/api/food-entries")

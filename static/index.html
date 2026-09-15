@@ -104,6 +104,9 @@
                     </div>
 
                     <div id="food-instances-count" class="count-badge"></div>
+
+                    <!-- Load More Foods Button -->
+                    <button id="load-more-foods-btn" class="action-btn" style="width: 100%; margin-top: 10px;">Load More Foods from MFP</button>
                 </div>
 
                 <!-- Food Entries Tab -->
@@ -280,6 +283,37 @@
                         <div class="login-status" id="login-status"></div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load More Foods Modal -->
+    <div id="load-foods-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Load Foods from Date Range</h2>
+                <button id="close-modal-btn" class="modal-close" type="button">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-section">
+                    <label for="foods-start-date">Start Date:</label>
+                    <input type="date" id="foods-start-date">
+                </div>
+                <div class="modal-section">
+                    <label for="foods-end-date">End Date:</label>
+                    <input type="date" id="foods-end-date">
+                </div>
+                <div class="modal-section">
+                    <label>Quick Options:</label>
+                    <div class="quick-buttons">
+                        <button id="quick-1-week" class="quick-btn" type="button">1 Week Before End Date</button>
+                        <button id="quick-1-month" class="quick-btn" type="button">1 Month Before End Date</button>
+                    </div>
+                </div>
+                <div class="modal-section">
+                    <button id="load-foods-confirm" class="action-btn primary" style="width: 100%;" type="button">Load Foods</button>
+                </div>
+                <div id="load-foods-status" style="margin-top: 10px; text-align: center; font-size: 12px; color: #999;"></div>
             </div>
         </div>
     </div>

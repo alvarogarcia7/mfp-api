@@ -30,6 +30,17 @@ let selectedPolarActivities = [];
 let currentFoodView = "table";  // "table" or "cards"
 let filteredFoodDatabase = [];
 
+// Modal elements
+const loadMoreFoodsBtn = document.getElementById("load-more-foods-btn");
+const loadFoodsModal = document.getElementById("load-foods-modal");
+const closeModalBtn = document.getElementById("close-modal-btn");
+const startDateInput = document.getElementById("foods-start-date");
+const endDateInput = document.getElementById("foods-end-date");
+const quick1WeekBtn = document.getElementById("quick-1-week");
+const quick1MonthBtn = document.getElementById("quick-1-month");
+const loadFoodsConfirmBtn = document.getElementById("load-foods-confirm");
+const loadFoodsStatus = document.getElementById("load-foods-status");
+
 // Initialize
 document.addEventListener("DOMContentLoaded", () => {
     // Set today's date as default
@@ -110,6 +121,21 @@ document.addEventListener("DOMContentLoaded", () => {
             switchFoodView(btn.dataset.view);
         });
     });
+
+    // Modal listeners
+    if (loadMoreFoodsBtn) loadMoreFoodsBtn.addEventListener("click", openLoadFoodsModal);
+    if (closeModalBtn) closeModalBtn.addEventListener("click", closeLoadFoodsModal);
+    if (loadFoodsModal) {
+        loadFoodsModal.addEventListener("click", (e) => {
+            if (e.target === loadFoodsModal) closeLoadFoodsModal();
+        });
+    }
+    if (quick1WeekBtn) quick1WeekBtn.addEventListener("click", setQuick1Week);
+    if (quick1MonthBtn) quick1MonthBtn.addEventListener("click", setQuick1Month);
+    if (loadFoodsConfirmBtn) loadFoodsConfirmBtn.addEventListener("click", loadFoodsFromRange);
+
+    // Set default dates for modal
+    if (endDateInput) endDateInput.valueAsDate = new Date();
 
     // Load food instances on startup
     loadFoodInstances();
@@ -929,4 +955,95 @@ function switchFoodView(view) {
 
     // Re-render with current filtered data
     displayFoodInstances(filteredFoodDatabase);
+}
+
+// Modal functions
+function openLoadFoodsModal() {
+    if (!sessionId) {
+        alert("Please login to MFP first to load more foods");
+        return;
+    }
+    if (loadFoodsModal) {
+        loadFoodsModal.style.display = "flex";
+    }
+}
+
+function closeLoadFoodsModal() {
+    if (loadFoodsModal) {
+        loadFoodsModal.style.display = "none";
+    }
+    if (loadFoodsStatus) {
+        loadFoodsStatus.textContent = "";
+    }
+}
+
+function setQuick1Week() {
+    const endDate = new Date(endDateInput.value || new Date());
+    const startDate = new Date(endDate);
+    startDate.setDate(startDate.getDate() - 7);
+
+    if (startDateInput) startDateInput.valueAsDate = startDate;
+    if (endDateInput) endDateInput.valueAsDate = endDate;
+}
+
+function setQuick1Month() {
+    const endDate = new Date(endDateInput.value || new Date());
+    const startDate = new Date(endDate);
+    startDate.setMonth(startDate.getMonth() - 1);
+
+    if (startDateInput) startDateInput.valueAsDate = startDate;
+    if (endDateInput) endDateInput.valueAsDate = endDate;
+}
+
+async function loadFoodsFromRange() {
+    if (!sessionId || !startDateInput || !endDateInput) return;
+
+    try {
+        if (loadFoodsConfirmBtn) loadFoodsConfirmBtn.disabled = true;
+        if (loadFoodsStatus) loadFoodsStatus.textContent = "Loading foods...";
+
+        const startDate = startDateInput.value;
+        const endDate = endDateInput.value;
+
+        console.log(`\n📥 LOADING FOODS FROM RANGE: ${startDate} to ${endDate}`);
+
+        const response = await fetch(`/api/foods/range?start_date=${startDate}&end_date=${endDate}`, {
+            headers: { "Authorization": `Bearer ${sessionId}` },
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to load foods: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const newFoods = data.foods || [];
+
+        console.log(`✅ Loaded ${newFoods.length} foods from range`);
+
+        // Merge with existing database (avoid duplicates)
+        const existingNames = new Set(localFoodDatabase.map(f => f.name));
+        const uniqueNewFoods = newFoods.filter(f => !existingNames.has(f.name));
+
+        localFoodDatabase = [...localFoodDatabase, ...uniqueNewFoods];
+
+        console.log(`📚 Database now has ${localFoodDatabase.length} total foods`);
+
+        if (loadFoodsStatus) {
+            loadFoodsStatus.textContent = `✅ Added ${uniqueNewFoods.length} new foods. Database now has ${localFoodDatabase.length} foods.`;
+        }
+
+        // Refresh the food display
+        applyFoodFiltersAndSort();
+
+        setTimeout(() => {
+            closeLoadFoodsModal();
+        }, 2000);
+    } catch (err) {
+        console.error("❌ Error loading foods:", err);
+        if (loadFoodsStatus) {
+            loadFoodsStatus.textContent = `❌ Error: ${err.message}`;
+        }
+    } finally {
+        if (loadFoodsConfirmBtn) loadFoodsConfirmBtn.disabled = false;
+    }
 }
