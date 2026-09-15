@@ -312,6 +312,18 @@ async function initializeFoodDatabase() {
     }
 
     try {
+        // Try to load from localStorage first
+        const saved = localStorage.getItem("foodDatabase");
+        if (saved) {
+            localFoodDatabase = JSON.parse(saved);
+            dbInitialized = true;
+            console.log(`📚 Loaded database from localStorage: ${localFoodDatabase.length} foods`);
+            console.log("📋 Available foods:", localFoodDatabase);
+            return;
+        }
+
+        // Only fetch from server if database doesn't exist locally
+        console.log("📡 Fetching initial food database from server...");
         const response = await fetch("/api/foods/recent", {
             headers: { "Authorization": `Bearer ${sessionId}` },
         });
@@ -324,6 +336,9 @@ async function initializeFoodDatabase() {
         const data = await response.json();
         localFoodDatabase = data.foods || [];
         dbInitialized = true;
+
+        // Save to localStorage for future sessions
+        localStorage.setItem("foodDatabase", JSON.stringify(localFoodDatabase));
 
         console.log(`✅ Initialized local database with ${localFoodDatabase.length} foods`);
         console.log("📋 Available foods:", localFoodDatabase);
@@ -352,16 +367,22 @@ async function handleSearch() {
     if (lines.length === 0) return;
 
     try {
-        console.log("\n🔍 SEARCHING LOCAL DATABASE");
-        // Search for all food items in local database
+        console.log("\n🔍 SEARCHING LOCAL DATABASE ONLY");
+
+        if (!dbInitialized || localFoodDatabase.length === 0) {
+            alert("Food database not initialized. Please log in again.");
+            return;
+        }
+
+        // Search for all food items in local database ONLY
         currentFoodItems = [];
 
         for (const line of lines) {
             const parsed = parseInput(line);
             console.log(`\n🔍 SEARCHING FOR: ${parsed.name} (${parsed.quantity}${parsed.unit})`);
-            console.log("📚 Searching in local database...");
+            console.log("📚 Searching local database (no MFP API calls)...");
 
-            // Search local database instead of MFP API
+            // Search ONLY local database - never query MFP API
             const results = searchLocalFoods(parsed.name);
 
             console.log(`✅ Found ${results.length} results in local database`);
@@ -387,7 +408,7 @@ async function handleSearch() {
                     selected: formattedResults[0], // Pre-select first (most likely)
                 });
             } else {
-                console.warn(`⚠️ No results found for "${parsed.name}"`);
+                console.warn(`⚠️ No results found for "${parsed.name}" in local database`);
             }
         }
 
