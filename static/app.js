@@ -601,7 +601,7 @@ async function handleSearch() {
         if (currentFoodItems.length > 0) {
             showResults();
         } else {
-            alert("No foods found in local database. Use 'Load More Foods' to expand the database.");
+            alert("Food not found in local database.\n\nTo add it:\n1. Go to MyFitnessPal.com and add it there\n2. Return here and click 'Load More Foods' to sync");
         }
     } catch (err) {
         console.error("❌ Search error:", err);
