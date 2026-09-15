@@ -51,8 +51,8 @@ const loadFoodsStatus = document.getElementById("load-foods-status");
 document.addEventListener("DOMContentLoaded", () => {
     sessionId = localStorage.getItem("sessionId");
     if (sessionId) {
-        showDashboard();
-        loadToday();
+        // Verify sessionId is still valid
+        verifySessionAndInit();
     } else {
         showLogin();
         loadSavedCredentials();
@@ -142,6 +142,101 @@ function loadSavedCredentials() {
         cookieUsernameInput.value = savedCookieUsername;
         cookieInput.value = savedCookie;
     }
+}
+
+async function verifySessionAndInit() {
+    try {
+        console.log("🔐 Verifying sessionId...");
+        const response = await fetch("/api/today", {
+            headers: { "Authorization": `Bearer ${sessionId}` },
+        });
+
+        if (response.ok) {
+            console.log("✅ SessionId is valid");
+            showDashboard();
+            loadToday();
+            return;
+        }
+
+        if (response.status === 401) {
+            console.warn("⚠️ SessionId expired (401), attempting auto-login...");
+            sessionId = null;
+            localStorage.removeItem("sessionId");
+
+            // Try auto-login with saved credentials
+            await attemptAutoLogin();
+            return;
+        }
+
+        // Other errors - show login
+        throw new Error(`Unexpected response: ${response.status}`);
+    } catch (err) {
+        console.error("❌ Session verification failed:", err);
+        showLogin();
+        loadSavedCredentials();
+    }
+}
+
+async function attemptAutoLogin() {
+    const savedUsername = localStorage.getItem("savedUsername");
+    const savedPassword = localStorage.getItem("savedPassword");
+    const savedCookieUsername = localStorage.getItem("savedCookieUsername");
+    const savedCookie = localStorage.getItem("savedCookie");
+
+    // Try password login first
+    if (savedUsername && savedPassword) {
+        console.log("🔄 Auto-login with password...");
+        try {
+            const response = await fetch("/api/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username: savedUsername, password: savedPassword }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                sessionId = data.session_id;
+                localStorage.setItem("sessionId", sessionId);
+                console.log("✅ Auto-login successful");
+                await initializeFoodDatabase();
+                showDashboard();
+                loadToday();
+                return;
+            }
+        } catch (err) {
+            console.warn("⚠️ Password auto-login failed:", err);
+        }
+    }
+
+    // Try cookie login second
+    if (savedCookieUsername && savedCookie) {
+        console.log("🔄 Auto-login with cookie...");
+        try {
+            const response = await fetch("/api/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username: savedCookieUsername, cookie: savedCookie }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                sessionId = data.session_id;
+                localStorage.setItem("sessionId", sessionId);
+                console.log("✅ Auto-login successful");
+                await initializeFoodDatabase();
+                showDashboard();
+                loadToday();
+                return;
+            }
+        } catch (err) {
+            console.warn("⚠️ Cookie auto-login failed:", err);
+        }
+    }
+
+    // Auto-login failed, show login screen
+    console.log("❌ Auto-login failed, showing login screen");
+    showLogin();
+    loadSavedCredentials();
 }
 
 async function handleLogin(e) {
