@@ -896,6 +896,7 @@ async def get_polar_flow_activities(
             raise HTTPException(status_code=400, detail="start_date must be before end_date")
 
         logger.info(f"Fetching Polar Flow activities from {start} to {end}")
+        logger.debug(f"Using Polar Flow client with username: {os.getenv('POLAR_FLOW_USERNAME')}")
 
         def fetch_activities():
             return _polar_flow_client.get_activities(start, end)
@@ -917,11 +918,19 @@ async def get_polar_flow_activities(
             "date_range": {"start": start_date, "end": end_date}
         }
 
-    except ValueError:
+    except ValueError as e:
+        logger.error(f"Invalid date format: {e}")
         raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
     except Exception as e:
-        logger.error(f"Error fetching Polar Flow activities: {e}")
-        raise HTTPException(status_code=500, detail=f"Error fetching activities: {e}")
+        logger.error(f"Error fetching Polar Flow activities: {e}", exc_info=True)
+        error_msg = str(e)
+        if "404" in error_msg:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Polar Flow API error: {error_msg}. Check your credentials in .env.local"
+            )
+        else:
+            raise HTTPException(status_code=500, detail=f"Error fetching activities: {error_msg}")
 
 
 @app.post("/api/polar-flow/sync-to-mfp")

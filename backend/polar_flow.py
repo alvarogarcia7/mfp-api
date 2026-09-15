@@ -1,6 +1,7 @@
 """Polar Flow API integration for syncing cardio activities to MFP.
 
 Fetches activities from Polar Flow and creates cardio entries in MyFitnessPal.
+Supports VCR.py traffic recording/replay for offline testing.
 """
 
 import logging
@@ -8,8 +9,21 @@ from datetime import date, timedelta
 from typing import Optional
 import requests
 from curl_cffi import requests as curl_cffi_requests
+import vcr
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
+
+# VCR cassettes for Polar Flow API
+POLAR_CASSETTES_DIR = Path(__file__).parent / ".cassettes"
+POLAR_CASSETTES_DIR.mkdir(exist_ok=True)
+
+polar_vcr = vcr.VCR(
+    serializer='json',
+    cassette_library_dir=str(POLAR_CASSETTES_DIR),
+    record_mode='once',
+    match_on=['method', 'scheme', 'host', 'port', 'path', 'query'],
+)
 
 # Polar Flow API endpoints
 POLAR_API_BASE = "https://www.polaraccesslink.com"
@@ -56,47 +70,68 @@ class PolarFlowClient:
             "Accept-Language": "en-US,en;q=0.9",
         })
 
-    def get_activities(self, start_date: date, end_date: date) -> list[dict]:
+    def get_activities(self, start_date: date, end_date: date, use_vcr: bool = True) -> list[dict]:
         """Fetch activities from Polar Flow for a date range.
 
         Args:
             start_date: Start date (YYYY-MM-DD)
             end_date: End date (YYYY-MM-DD)
+            use_vcr: If True, use VCR cassettes for recording/replaying traffic
 
         Returns:
             List of activity dicts with fields: name, duration_minutes, calories, date
         """
-        activities = []
+        def _fetch():
+            activities = []
+            try:
+                # Polar Flow API endpoint for activities
+                url = f"{POLAR_FLOW_BASE}/api/user/{self.username}/activities"
+                params = {
+                    "start": start_date.isoformat(),
+                    "end": end_date.isoformat(),
+                }
 
-        try:
-            # Polar Flow API endpoint for activities
-            url = f"{POLAR_FLOW_BASE}/api/user/{self.username}/activities"
-            params = {
-                "start": start_date.isoformat(),
-                "end": end_date.isoformat(),
-            }
+                logger.info(f"Fetching Polar Flow activities from {start_date} to {end_date}")
+                logger.debug(f"Request URL: {url}")
+                logger.debug(f"Request params: {params}")
+                logger.debug(f"Request headers: {self.session.headers}")
 
-            logger.info(f"Fetching Polar Flow activities from {start_date} to {end_date}")
+                response = self.session.get(url, params=params, timeout=30)
 
-            response = self.session.get(url, params=params, timeout=30)
-            response.raise_for_status()
+                logger.debug(f"Response status: {response.status_code}")
+                logger.debug(f"Response URL: {response.url}")
 
-            data = response.json()
-            activities_list = data.get("activities", [])
+                if response.status_code == 404:
+                    logger.error(f"Polar Flow API returned 404. URL: {response.url}")
+                    logger.error(f"This may indicate: invalid username, wrong API endpoint, or missing authentication")
+                    raise Exception(f"HTTP 404: Polar Flow API endpoint not found. Check username and credentials.")
 
-            logger.info(f"Fetched {len(activities_list)} activities from Polar Flow")
+                response.raise_for_status()
 
-            # Parse activities
-            for activity in activities_list:
-                parsed_activity = self._parse_activity(activity)
-                if parsed_activity:
-                    activities.append(parsed_activity)
+                data = response.json()
+                activities_list = data.get("activities", [])
 
-            return activities
+                logger.info(f"Fetched {len(activities_list)} activities from Polar Flow")
 
-        except Exception as e:
-            logger.error(f"Error fetching Polar Flow activities: {e}")
-            raise
+                # Parse activities
+                for activity in activities_list:
+                    parsed_activity = self._parse_activity(activity)
+                    if parsed_activity:
+                        activities.append(parsed_activity)
+
+                return activities
+
+            except Exception as e:
+                logger.error(f"Error fetching Polar Flow activities: {e}", exc_info=True)
+                raise
+
+        # Use VCR cassette for recording/replaying traffic
+        if use_vcr:
+            cassette_name = f"polar_activities_{start_date.isoformat()}_{end_date.isoformat()}"
+            with polar_vcr.use_cassette(f"{cassette_name}.json"):
+                return _fetch()
+        else:
+            return _fetch()
 
     def _parse_activity(self, activity: dict) -> Optional[dict]:
         """Parse raw activity data from Polar Flow.

@@ -54,6 +54,16 @@ document.addEventListener("DOMContentLoaded", () => {
         btn.addEventListener("click", () => switchTab(btn.dataset.tab));
     });
 
+    // Handle URL hash changes
+    window.addEventListener("hashchange", () => {
+        const hash = window.location.hash.slice(1) || "food-instances";
+        switchTab(hash);
+    });
+
+    // Load initial tab from URL or default
+    const initialTab = window.location.hash.slice(1) || "food-instances";
+    switchTab(initialTab);
+
     // Login-related event listeners
     setupLoginListeners();
 
@@ -79,6 +89,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Polar Flow event listeners
     const polarStartDate = document.getElementById("polar-start-date");
     const polarEndDate = document.getElementById("polar-end-date");
+    const polarQuickToday = document.getElementById("polar-quick-today");
     const polarQuick1Week = document.getElementById("polar-quick-1-week");
     const polarQuick1Month = document.getElementById("polar-quick-1-month");
     const polarFetchBtn = document.getElementById("polar-fetch-btn");
@@ -87,6 +98,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (polarStartDate) polarStartDate.valueAsDate = new Date();
     if (polarEndDate) polarEndDate.valueAsDate = new Date();
 
+    if (polarQuickToday) polarQuickToday.addEventListener("click", setPolarQuickToday);
     if (polarQuick1Week) polarQuick1Week.addEventListener("click", setPolarQuick1Week);
     if (polarQuick1Month) polarQuick1Month.addEventListener("click", setPolarQuick1Month);
     if (polarFetchBtn) polarFetchBtn.addEventListener("click", fetchPolarActivities);
@@ -178,6 +190,9 @@ function updateStatusBadge(status) {
 }
 
 function switchTab(tabName) {
+    // Update URL hash
+    window.history.replaceState(null, "", `#${tabName}`);
+
     tabNavBtns.forEach(btn => {
         if (btn.dataset.tab === tabName) {
             btn.classList.add("active");
@@ -664,12 +679,23 @@ async function checkPolarFlowStatus() {
     }
 }
 
+function setPolarQuickToday() {
+    const today = new Date();
+    document.getElementById("polar-start-date").valueAsDate = today;
+    document.getElementById("polar-end-date").valueAsDate = today;
+
+    document.getElementById("polar-quick-today").classList.add("active");
+    document.getElementById("polar-quick-1-week").classList.remove("active");
+    document.getElementById("polar-quick-1-month").classList.remove("active");
+}
+
 function setPolarQuick1Week() {
     const endDate = new Date(document.getElementById("polar-end-date").valueAsDate || new Date());
     const startDate = new Date(endDate);
     startDate.setDate(startDate.getDate() - 7);
 
     document.getElementById("polar-start-date").valueAsDate = startDate;
+    document.getElementById("polar-quick-today").classList.remove("active");
     document.getElementById("polar-quick-1-week").classList.add("active");
     document.getElementById("polar-quick-1-month").classList.remove("active");
 }
@@ -680,6 +706,7 @@ function setPolarQuick1Month() {
     startDate.setMonth(startDate.getMonth() - 1);
 
     document.getElementById("polar-start-date").valueAsDate = startDate;
+    document.getElementById("polar-quick-today").classList.remove("active");
     document.getElementById("polar-quick-1-week").classList.remove("active");
     document.getElementById("polar-quick-1-month").classList.add("active");
 }
