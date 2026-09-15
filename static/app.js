@@ -32,6 +32,10 @@ let currentFoodItems = [];
 // Store debug info from server responses
 let entryDebugInfo = {};
 
+// Local food database
+let localFoodDatabase = [];
+let dbInitialized = false;
+
 // Initialize
 document.addEventListener("DOMContentLoaded", () => {
     sessionId = localStorage.getItem("sessionId");
@@ -188,6 +192,8 @@ async function performLogin(credentials, errorElement) {
         localStorage.setItem("sessionId", sessionId);
 
         console.log("Login successful, session:", sessionId);
+        console.log("📚 Initializing local food database from last 7 days...");
+        await initializeFoodDatabase();
         showDashboard();
         loadToday();
     } catch (err) {
@@ -299,6 +305,44 @@ function updateDashboard(data) {
     foodInput.value = "";
 }
 
+async function initializeFoodDatabase() {
+    if (dbInitialized) {
+        console.log("📚 Food database already initialized");
+        return;
+    }
+
+    try {
+        const response = await fetch("/api/foods/recent", {
+            headers: { "Authorization": `Bearer ${sessionId}` },
+        });
+
+        if (!response.ok) {
+            console.warn("⚠️ Failed to fetch recent foods:", response.status);
+            return;
+        }
+
+        const data = await response.json();
+        localFoodDatabase = data.foods || [];
+        dbInitialized = true;
+
+        console.log(`✅ Initialized local database with ${localFoodDatabase.length} foods`);
+        console.log("📋 Available foods:", localFoodDatabase);
+    } catch (err) {
+        console.error("❌ Error initializing food database:", err);
+    }
+}
+
+function searchLocalFoods(query) {
+    if (!query || query.length === 0) {
+        return [];
+    }
+
+    const queryLower = query.toLowerCase();
+    return localFoodDatabase.filter(food =>
+        food.name.toLowerCase().includes(queryLower)
+    ).slice(0, 5);  // Return top 5 matches
+}
+
 async function handleSearch() {
     const text = foodInput.value.trim();
     if (!text || !sessionId) return;
@@ -308,53 +352,52 @@ async function handleSearch() {
     if (lines.length === 0) return;
 
     try {
-        // Search for all food items
+        console.log("\n🔍 SEARCHING LOCAL DATABASE");
+        // Search for all food items in local database
         currentFoodItems = [];
 
         for (const line of lines) {
             const parsed = parseInput(line);
             console.log(`\n🔍 SEARCHING FOR: ${parsed.name} (${parsed.quantity}${parsed.unit})`);
+            console.log("📚 Searching in local database...");
 
-            const searchPayload = { query: parsed.name };
-            console.log("📤 Request payload:", searchPayload);
+            // Search local database instead of MFP API
+            const results = searchLocalFoods(parsed.name);
 
-            const response = await fetch("/api/search", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${sessionId}`,
-                },
-                body: JSON.stringify(searchPayload),
-            });
-
-            console.log("📥 Response status:", response.status, response.statusText);
-
-            if (!response.ok) throw new Error("Search failed");
-
-            const data = await response.json();
-            console.log("📦 Response data:", data);
-
-            const results = data.results || [];
-            console.log(`✅ Found ${results.length} results`);
+            console.log(`✅ Found ${results.length} results in local database`);
 
             if (results.length > 0) {
                 console.log("🥇 Top result:", results[0]);
+                // Convert results to compatible format
+                const formattedResults = results.map(food => ({
+                    name: food.name,
+                    calories: food.calories,
+                    protein: food.protein,
+                    carbs: food.carbs,
+                    fat: food.fat,
+                    food_id: `local_${food.name.replace(/\s+/g, '_')}`,
+                    weight_id: "100",  // Standard: 100g
+                }));
+
                 // Store with metadata
                 currentFoodItems.push({
                     query: line,
                     parsed: parsed,
-                    results: results,
-                    selected: results[0], // Pre-select first (most likely)
+                    results: formattedResults,
+                    selected: formattedResults[0], // Pre-select first (most likely)
                 });
+            } else {
+                console.warn(`⚠️ No results found for "${parsed.name}"`);
             }
         }
 
         if (currentFoodItems.length > 0) {
             showResults();
         } else {
-            alert("No foods found");
+            alert("No foods found in local database. Add more entries to MyFitnessPal to expand the database.");
         }
     } catch (err) {
+        console.error("❌ Search error:", err);
         alert(`Search error: ${err.message}`);
     }
 }

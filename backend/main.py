@@ -283,6 +283,56 @@ def _safe_float(value) -> float:
         return 0.0
 
 
+@app.get("/api/foods/recent")
+async def get_recent_foods(session_id: str = Depends(get_session_id)):
+    """Get foods from diary entries in the last 7 days, normalized to grams/ml.
+
+    Returns a list of unique foods with standardized measurements.
+    """
+    client = get_client(session_id)
+    from datetime import timedelta
+
+    def fetch_foods():
+        foods_map = {}  # Use dict to deduplicate by food name
+
+        # Fetch last 7 days of diary entries
+        for i in range(7):
+            day = date.today() - timedelta(days=i)
+            try:
+                mfp_day = client.get_date(day)
+
+                for meal in mfp_day.meals:
+                    for entry in meal.entries:
+                        name = entry.name
+                        calories = _safe_float(entry.totals.get("calories"))
+                        protein = _safe_float(entry.totals.get("protein"))
+                        carbs = _safe_float(entry.totals.get("carbohydrates"))
+                        fat = _safe_float(entry.totals.get("fat"))
+
+                        # Skip if already have this food (take first occurrence)
+                        if name not in foods_map:
+                            foods_map[name] = {
+                                "name": name,
+                                "calories": calories,
+                                "protein": protein,
+                                "carbs": carbs,
+                                "fat": fat,
+                                "unit": "g",  # All foods stored in grams
+                            }
+            except Exception as e:
+                logger.warning(f"Error fetching diary for {day}: {e}")
+                continue
+
+        return list(foods_map.values())
+
+    try:
+        foods = await asyncio.to_thread(fetch_foods)
+        logger.info(f"Fetched {len(foods)} unique foods from last 7 days")
+        return {"foods": foods}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching recent foods: {e}")
+
+
 # Mount static files (frontend)
 import pathlib
 static_dir = pathlib.Path(__file__).parent.parent / "static"
