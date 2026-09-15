@@ -15,6 +15,7 @@ import argparse
 import json
 import logging
 import sys
+from datetime import datetime
 from pathlib import Path
 from jsonschema import validate, ValidationError
 
@@ -30,6 +31,8 @@ BACKEND_DIR = Path(__file__).parent
 RAW_DATA_DIR = BACKEND_DIR.parent / "data" / "raw_food_data"
 FOOD_CACHE_FILE = BACKEND_DIR / ".food_cache.json"
 FOOD_SCHEMA_FILE = BACKEND_DIR / "food_schema.json"
+BACKUP_DIR = BACKEND_DIR / ".backups"
+BACKUP_DIR.mkdir(exist_ok=True)
 
 
 def load_food_schema() -> dict:
@@ -189,14 +192,53 @@ def merge_foods(new_foods: list[dict], existing_foods: list[dict]) -> list[dict]
     return list(foods_map.values())
 
 
-def save_food_cache(foods: list[dict]) -> None:
+def backup_food_cache() -> str:
+    """Create a backup of the existing food cache.
+
+    Returns:
+        Path to backup file
+    """
+    if not FOOD_CACHE_FILE.exists():
+        return None
+
+    try:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_file = BACKUP_DIR / f"food_cache_{timestamp}.json"
+
+        # Copy existing file to backup
+        with open(FOOD_CACHE_FILE, 'r') as f:
+            data = json.load(f)
+
+        with open(backup_file, 'w') as f:
+            json.dump(data, f, indent=2)
+
+        logger.info(f"📦 Backed up existing cache to {backup_file.name}")
+        return str(backup_file)
+
+    except Exception as e:
+        logger.error(f"Failed to create backup: {e}")
+        return None
+
+
+def save_food_cache(foods: list[dict], replace_mode: bool = False, force_replace: bool = False) -> None:
     """Save food cache to disk.
 
     Args:
         foods: List of food objects to save
+        replace_mode: If True, will replace existing cache (requires confirmation)
+        force_replace: If True, replace without creating backup
     """
     # Ensure directory exists
     FOOD_CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+    # Handle replace mode
+    if replace_mode:
+        if FOOD_CACHE_FILE.exists():
+            if force_replace:
+                logger.warning("⚠️  Replacing existing cache (no backup created)")
+            else:
+                logger.info("Creating backup of existing cache before replace...")
+                backup_food_cache()
 
     with open(FOOD_CACHE_FILE, 'w') as f:
         json.dump(foods, f, indent=2)
@@ -218,16 +260,27 @@ def main():
     merge_group.add_argument(
         "--merge",
         action="store_true",
-        help="Merge with existing cache (keeps existing foods)"
+        default=True,
+        help="Merge with existing cache (default, keeps existing foods)"
     )
     merge_group.add_argument(
         "--replace",
         action="store_true",
-        default=True,
-        help="Replace existing cache (default)"
+        help="Replace existing cache (creates backup file)"
+    )
+
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Use with --replace to skip backup and force overwrite (destructive!)"
     )
 
     args = parser.parse_args()
+
+    # Validate arguments
+    if args.force and not args.replace:
+        logger.error("❌ --force can only be used with --replace")
+        sys.exit(1)
 
     logger.info("=" * 60)
     logger.info("Food Data Parser")
@@ -253,16 +306,15 @@ def main():
     validate_foods(new_foods, schema)
 
     # Merge or replace
-    if args.merge:
-        logger.info("Merging with existing cache")
+    if args.replace:
+        logger.info("Replace mode: will overwrite existing cache")
+        final_foods = new_foods
+        save_food_cache(final_foods, replace_mode=True, force_replace=args.force)
+    else:
+        logger.info("Merge mode: combining with existing cache (default)")
         existing_foods = load_existing_cache()
         final_foods = merge_foods(new_foods, existing_foods)
-    else:
-        logger.info("Replacing existing cache")
-        final_foods = new_foods
-
-    # Save
-    save_food_cache(final_foods)
+        save_food_cache(final_foods, replace_mode=False)
 
     logger.info("=" * 60)
     logger.info(f"✅ Food database updated: {len(final_foods)} foods")
