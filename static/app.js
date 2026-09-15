@@ -438,10 +438,21 @@ async function addAllSelected() {
         addAllBtn.disabled = true;
         addAllBtn.textContent = "Adding...";
 
+        let csrf = null;
+        if (toAdd.length > 0) {
+            const csrfResp = await fetch("/api/csrf", {
+                headers: { "Authorization": `Bearer ${sessionId}` },
+            });
+            if (csrfResp.ok) {
+                const csrfData = await csrfResp.json();
+                csrf = csrfData.csrf;
+            }
+        }
+
         for (let i = 0; i < toAdd.length; i++) {
             const item = toAdd[i];
             const food = item.selected;
-            await logFood(food.food_id, food.weight_id, item.parsed.quantity);
+            await logFood(food.food_id, food.weight_id, item.parsed.quantity, csrf);
 
             if (i < toAdd.length - 1) {
                 const delayMs = (Math.random() * 20 + 5) * 1000;
@@ -461,22 +472,28 @@ async function addAllSelected() {
     }
 }
 
-async function logFood(foodId, weightId, quantity) {
+async function logFood(foodId, weightId, quantity, csrf = null) {
     if (!sessionId) return;
 
     try {
+        const payload = {
+            food_id: foodId,
+            weight_id: weightId,
+            quantity: quantity,
+            meal: currentMeal,
+        };
+
+        if (csrf) {
+            payload.csrf = csrf;
+        }
+
         const response = await fetch("/api/log", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${sessionId}`,
             },
-            body: JSON.stringify({
-                food_id: foodId,
-                weight_id: weightId,
-                quantity: quantity,
-                meal: currentMeal,
-            }),
+            body: JSON.stringify(payload),
         });
 
         if (!response.ok) throw new Error("Failed to log food");

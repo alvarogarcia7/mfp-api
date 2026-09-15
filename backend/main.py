@@ -202,28 +202,52 @@ async def search(request: dict = Body(...), session_id: str = Depends(get_sessio
         raise HTTPException(status_code=500, detail=f"Search error: {e}")
 
 
+@app.get("/api/csrf")
+async def get_csrf(session_id: str = Depends(get_session_id)):
+    """Get CSRF token for batch operations."""
+    client = get_client(session_id)
+
+    def fetch_csrf():
+        doc, token = diary.diary_page(client, date.today())
+        return token
+
+    try:
+        csrf = await asyncio.to_thread(fetch_csrf)
+        return {"csrf": csrf}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"CSRF fetch error: {e}")
+
+
 @app.post("/api/log")
 async def log_food(request: dict = Body(...), session_id: str = Depends(get_session_id)):
-    """Log food to diary."""
+    """Log food to diary.
+
+    Optionally accepts a pre-fetched CSRF token to avoid redundant requests.
+    If csrf is not provided, fetches it from the diary page.
+    """
     client = get_client(session_id)
 
     food_id = request.get("food_id")
     weight_id = request.get("weight_id")
     quantity = request.get("quantity", 1.0)
     meal = request.get("meal", "breakfast")
+    csrf = request.get("csrf")
 
     if not food_id or not weight_id:
         raise HTTPException(status_code=400, detail="Missing food_id or weight_id")
 
     def log_it():
-        return diary.push_food(
+        nonlocal csrf
+        if not csrf:
+            doc, csrf = diary.diary_page(client, date.today())
+        return diary.add_food_to_diary(
             client,
-            date.today(),
+            food_id,
+            weight_id,
+            csrf,
             meal,
-            "",  # dummy query
-            quantity=float(quantity),
-            food_id=food_id,
-            weight_id=weight_id,
+            date.today(),
+            float(quantity),
         )
 
     try:
