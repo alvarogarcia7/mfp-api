@@ -313,7 +313,10 @@ async function handleSearch() {
 
         for (const line of lines) {
             const parsed = parseInput(line);
-            console.log(`Searching for: ${parsed.name} (${parsed.quantity}${parsed.unit})`);
+            console.log(`\n🔍 SEARCHING FOR: ${parsed.name} (${parsed.quantity}${parsed.unit})`);
+
+            const searchPayload = { query: parsed.name };
+            console.log("📤 Request payload:", searchPayload);
 
             const response = await fetch("/api/search", {
                 method: "POST",
@@ -321,15 +324,21 @@ async function handleSearch() {
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${sessionId}`,
                 },
-                body: JSON.stringify({ query: parsed.name }),
+                body: JSON.stringify(searchPayload),
             });
+
+            console.log("📥 Response status:", response.status, response.statusText);
 
             if (!response.ok) throw new Error("Search failed");
 
             const data = await response.json();
+            console.log("📦 Response data:", data);
+
             const results = data.results || [];
+            console.log(`✅ Found ${results.length} results`);
 
             if (results.length > 0) {
+                console.log("🥇 Top result:", results[0]);
                 // Store with metadata
                 currentFoodItems.push({
                     query: line,
@@ -452,33 +461,45 @@ async function addAllSelected() {
         addAllBtn.disabled = true;
         addAllBtn.textContent = "Adding...";
 
+        console.log(`\n📋 BATCH OPERATION: Adding ${toAdd.length} items`);
+
         let csrf = null;
         if (toAdd.length > 0) {
+            console.log("🔐 Fetching CSRF token...");
             const csrfResp = await fetch("/api/csrf", {
                 headers: { "Authorization": `Bearer ${sessionId}` },
             });
+            console.log("📥 CSRF response status:", csrfResp.status, csrfResp.statusText);
             if (csrfResp.ok) {
                 const csrfData = await csrfResp.json();
                 csrf = csrfData.csrf;
+                console.log("✅ CSRF token received");
+            } else {
+                console.warn("⚠️ Failed to fetch CSRF token, will fetch per-entry");
             }
         }
 
         for (let i = 0; i < toAdd.length; i++) {
             const item = toAdd[i];
             const food = item.selected;
+            console.log(`\n➕ Adding item ${i + 1}/${toAdd.length}: ${food.name}`);
             await logFood(food.food_id, food.weight_id, item.parsed.quantity, csrf);
 
             if (i < toAdd.length - 1) {
                 const delayMs = (Math.random() * 20 + 5) * 1000;
+                const delaySec = (delayMs / 1000).toFixed(1);
+                console.log(`⏳ Waiting ${delaySec}s before next entry...`);
                 await new Promise(resolve => setTimeout(resolve, delayMs));
             }
         }
 
+        console.log("\n✨ Batch operation completed successfully");
         foodInput.value = "";
         searchResults.style.display = "none";
         currentFoodItems = [];
         await loadToday();
     } catch (err) {
+        console.error("❌ Batch operation error:", err);
         alert(`Error adding foods: ${err.message}`);
     } finally {
         addAllBtn.disabled = false;
@@ -501,6 +522,9 @@ async function logFood(foodId, weightId, quantity, csrf = null) {
             payload.csrf = csrf;
         }
 
+        console.log(`\n📝 LOGGING FOOD: ID=${foodId}, Qty=${quantity}g, Meal=${currentMeal}`);
+        console.log("📤 Request payload:", payload);
+
         const response = await fetch("/api/log", {
             method: "POST",
             headers: {
@@ -510,13 +534,18 @@ async function logFood(foodId, weightId, quantity, csrf = null) {
             body: JSON.stringify(payload),
         });
 
+        console.log("📥 Response status:", response.status, response.statusText);
+
         if (!response.ok) throw new Error("Failed to log food");
 
         const data = await response.json();
+        console.log("📦 Response data:", data);
+        console.log("✅ Food successfully logged");
+
         const key = `${foodId}_${Date.now()}`;
         entryDebugInfo[key] = data;
-        console.log("Food logged:", data);
     } catch (err) {
+        console.error("❌ Error logging food:", err);
         alert(`Error logging food: ${err.message}`);
     }
 }
