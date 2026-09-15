@@ -29,6 +29,8 @@ logger = logging.getLogger(__name__)
 BACKEND_DIR = Path(__file__).parent
 RAW_DATA_DIR = BACKEND_DIR.parent / "data" / "raw_polar_data"
 EXERCISE_DB_FILE = BACKEND_DIR / ".exercise_cache.json"
+BACKUP_DIR = BACKEND_DIR / ".backups"
+BACKUP_DIR.mkdir(exist_ok=True)
 
 
 def load_raw_polar_files(specific_file: str = None) -> dict:
@@ -226,14 +228,53 @@ def merge_exercises(new_exercises: list[dict], existing_exercises: list[dict]) -
     return list(exercises_map.values())
 
 
-def save_exercise_cache(exercises: list[dict]) -> None:
+def backup_exercise_cache() -> str:
+    """Create a backup of the existing exercise cache.
+
+    Returns:
+        Path to backup file
+    """
+    if not EXERCISE_DB_FILE.exists():
+        return None
+
+    try:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_file = BACKUP_DIR / f"exercise_cache_{timestamp}.json"
+
+        # Copy existing file to backup
+        with open(EXERCISE_DB_FILE, 'r') as f:
+            data = json.load(f)
+
+        with open(backup_file, 'w') as f:
+            json.dump(data, f, indent=2)
+
+        logger.info(f"📦 Backed up existing cache to {backup_file.name}")
+        return str(backup_file)
+
+    except Exception as e:
+        logger.error(f"Failed to create backup: {e}")
+        return None
+
+
+def save_exercise_cache(exercises: list[dict], replace_mode: bool = False, force_replace: bool = False) -> None:
     """Save exercise cache to disk.
 
     Args:
         exercises: List of exercise objects to save
+        replace_mode: If True, will replace existing cache (requires confirmation)
+        force_replace: If True, replace without creating backup
     """
     # Ensure directory exists
     EXERCISE_DB_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+    # Handle replace mode
+    if replace_mode:
+        if EXERCISE_DB_FILE.exists():
+            if force_replace:
+                logger.warning("⚠️  Replacing existing cache (no backup created)")
+            else:
+                logger.info("Creating backup of existing cache before replace...")
+                backup_exercise_cache()
 
     with open(EXERCISE_DB_FILE, 'w') as f:
         json.dump(exercises, f, indent=2)
@@ -255,16 +296,27 @@ def main():
     merge_group.add_argument(
         "--merge",
         action="store_true",
-        help="Merge with existing cache (keeps existing exercises)"
+        default=True,
+        help="Merge with existing cache (default, keeps existing exercises)"
     )
     merge_group.add_argument(
         "--replace",
         action="store_true",
-        default=True,
-        help="Replace existing cache (default)"
+        help="Replace existing cache (creates backup file)"
+    )
+
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Use with --replace to skip backup and force overwrite (destructive!)"
     )
 
     args = parser.parse_args()
+
+    # Validate arguments
+    if args.force and not args.replace:
+        logger.error("❌ --force can only be used with --replace")
+        sys.exit(1)
 
     logger.info("=" * 60)
     logger.info("Polar Flow Data Parser")
@@ -284,16 +336,15 @@ def main():
     logger.info(f"Parsed {len(new_exercises)} unique exercises")
 
     # Merge or replace
-    if args.merge:
-        logger.info("Merging with existing cache")
+    if args.replace:
+        logger.info("Replace mode: will overwrite existing cache")
+        final_exercises = new_exercises
+        save_exercise_cache(final_exercises, replace_mode=True, force_replace=args.force)
+    else:
+        logger.info("Merge mode: combining with existing cache (default)")
         existing_exercises = load_existing_cache()
         final_exercises = merge_exercises(new_exercises, existing_exercises)
-    else:
-        logger.info("Replacing existing cache")
-        final_exercises = new_exercises
-
-    # Save
-    save_exercise_cache(final_exercises)
+        save_exercise_cache(final_exercises, replace_mode=False)
 
     logger.info("=" * 60)
     logger.info(f"✅ Exercise database updated: {len(final_exercises)} exercises")
