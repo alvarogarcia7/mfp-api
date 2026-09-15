@@ -15,6 +15,7 @@ dependencies = [
     "python-multipart",
     "jsonschema>=4.17",
     "vcrpy>=5.0",
+    "python-dotenv>=1.0",
 ]
 
 [project.optional-dependencies]

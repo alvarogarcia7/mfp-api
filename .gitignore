@@ -52,3 +52,8 @@ session_*
 
 # uv
 .uv/
+
+# Environment files with credentials
+.env
+.env.local
+.env.*.local

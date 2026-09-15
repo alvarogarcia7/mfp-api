@@ -7,13 +7,19 @@ import uuid
 from datetime import date
 from pathlib import Path
 from typing import Annotated
+import os
 
 from fastapi import FastAPI, HTTPException, Header, Depends, Body
 from fastapi.staticfiles import StaticFiles
 from jsonschema import validate, ValidationError
+from dotenv import load_dotenv
 
 from vendor import mfp_client, diary
 from mfp_auth import login_mfp_password, login_mfp_cookie
+from polar_flow import create_polar_client
+
+# Load environment variables from .env.local
+load_dotenv(Path(__file__).parent.parent / ".env.local")
 
 # Configure logging
 logging.basicConfig(
@@ -32,6 +38,10 @@ _current_user: dict | None = None
 
 # In-memory food entries: {date -> {meal -> [foods]}}
 _food_entries: dict = {}
+
+# Polar Flow integration
+_polar_flow_client = None
+_polar_flow_activities: dict = {}  # Cached activities by date
 
 # Food database file path
 FOOD_DB_FILE = Path(__file__).parent / ".food_cache.json"
@@ -717,6 +727,198 @@ async def add_food_entry(request: dict = Body(...), session_id: str = Depends(ge
     except Exception as e:
         logger.error(f"Error adding food entry: {e}")
         raise HTTPException(status_code=500, detail=f"Error adding entry: {e}")
+
+
+# ============================================================================
+# POLAR FLOW INTEGRATION
+# ============================================================================
+
+@app.get("/api/polar-flow/status")
+async def get_polar_flow_status():
+    """Check if Polar Flow is configured and connected."""
+    global _polar_flow_client
+
+    polar_username = os.getenv("POLAR_FLOW_USERNAME")
+    polar_cookie = os.getenv("POLAR_FLOW_COOKIE")
+
+    if not polar_username or not polar_cookie:
+        return {
+            "connected": False,
+            "configured": False,
+            "message": "Polar Flow credentials not found in .env.local"
+        }
+
+    if _polar_flow_client is None:
+        try:
+            _polar_flow_client = create_polar_client(polar_cookie, polar_username)
+            if not _polar_flow_client.validate_connection():
+                return {
+                    "connected": False,
+                    "configured": True,
+                    "message": "Invalid Polar Flow credentials"
+                }
+        except Exception as e:
+            logger.error(f"Error connecting to Polar Flow: {e}")
+            return {
+                "connected": False,
+                "configured": True,
+                "message": f"Connection error: {e}"
+            }
+
+    return {
+        "connected": True,
+        "configured": True,
+        "username": os.getenv("POLAR_FLOW_USERNAME"),
+        "message": "Connected to Polar Flow"
+    }
+
+
+@app.get("/api/polar-flow/activities")
+async def get_polar_flow_activities(
+    start_date: str,
+    end_date: str,
+    session_id: str = Depends(get_session_id)
+):
+    """Fetch activities from Polar Flow for a date range.
+
+    Format: YYYY-MM-DD
+    """
+    global _polar_flow_client, _polar_flow_activities
+
+    if _polar_flow_client is None:
+        polar_username = os.getenv("POLAR_FLOW_USERNAME")
+        polar_cookie = os.getenv("POLAR_FLOW_COOKIE")
+
+        if not polar_username or not polar_cookie:
+            raise HTTPException(
+                status_code=400,
+                detail="Polar Flow not configured. Add credentials to .env.local"
+            )
+
+        try:
+            _polar_flow_client = create_polar_client(polar_cookie, polar_username)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Polar Flow connection error: {e}")
+
+    try:
+        start = date.fromisoformat(start_date)
+        end = date.fromisoformat(end_date)
+
+        if start > end:
+            raise HTTPException(status_code=400, detail="start_date must be before end_date")
+
+        logger.info(f"Fetching Polar Flow activities from {start} to {end}")
+
+        def fetch_activities():
+            return _polar_flow_client.get_activities(start, end)
+
+        activities = await asyncio.to_thread(fetch_activities)
+
+        # Cache activities by date
+        for activity in activities:
+            activity_date = activity.get("date")
+            if activity_date not in _polar_flow_activities:
+                _polar_flow_activities[activity_date] = []
+            _polar_flow_activities[activity_date].append(activity)
+
+        logger.info(f"Fetched {len(activities)} activities from Polar Flow")
+
+        return {
+            "activities": activities,
+            "count": len(activities),
+            "date_range": {"start": start_date, "end": end_date}
+        }
+
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    except Exception as e:
+        logger.error(f"Error fetching Polar Flow activities: {e}")
+        raise HTTPException(status_code=500, detail=f"Error fetching activities: {e}")
+
+
+@app.post("/api/polar-flow/sync-to-mfp")
+async def sync_polar_activities_to_mfp(
+    request: dict = Body(...),
+    session_id: str = Depends(get_session_id)
+):
+    """Sync selected Polar Flow activities to MFP as cardio exercises.
+
+    Request body:
+    {
+        "activities": [
+            {
+                "date": "2026-09-15",
+                "name": "Polar Flow - Running",
+                "duration_minutes": 30,
+                "calories": 300
+            }
+        ]
+    }
+    """
+    if not session_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Must be logged into MFP to sync activities"
+        )
+
+    client = get_client(session_id)
+    if not client:
+        raise HTTPException(
+            status_code=401,
+            detail="Not logged into MFP"
+        )
+
+    activities = request.get("activities", [])
+    if not activities:
+        raise HTTPException(status_code=400, detail="No activities to sync")
+
+    synced = []
+    errors = []
+
+    try:
+        for activity in activities:
+            try:
+                activity_date = date.fromisoformat(activity.get("date", ""))
+                duration_minutes = activity.get("duration_minutes", 0)
+                calories = activity.get("calories", 0)
+                name = activity.get("name", "Cardio Activity")
+
+                if not duration_minutes or not calories:
+                    errors.append(f"{name}: missing duration or calories")
+                    continue
+
+                logger.info(f"Syncing {name} ({duration_minutes}min, {calories}cal) to MFP")
+
+                def add_exercise():
+                    """Add exercise to MFP diary."""
+                    doc, csrf = diary.diary_page(client, activity_date)
+                    # Add as note since we don't have direct exercise API
+                    # Format: "Activity: X minutes, Y calories"
+                    note_text = f"{name}: {duration_minutes} minutes, {int(calories)} calories"
+                    diary.set_note(client, activity_date, note_text)
+
+                await asyncio.to_thread(add_exercise)
+                synced.append({
+                    "name": name,
+                    "date": activity.get("date"),
+                    "duration_minutes": duration_minutes,
+                    "calories": calories
+                })
+
+            except Exception as e:
+                logger.error(f"Error syncing activity: {e}")
+                errors.append(f"{activity.get('name', 'Unknown')}: {str(e)}")
+
+        return {
+            "synced": synced,
+            "synced_count": len(synced),
+            "errors": errors,
+            "error_count": len(errors)
+        }
+
+    except Exception as e:
+        logger.error(f"Error in sync operation: {e}")
+        raise HTTPException(status_code=500, detail=f"Sync error: {e}")
 
 
 # Mount static files (frontend)

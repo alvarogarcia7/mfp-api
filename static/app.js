@@ -25,6 +25,8 @@ const loadDateBtn = document.getElementById("load-date-btn");
 const caloriesSummary = document.getElementById("calorie-summary");
 
 let currentFoodItems = [];
+let polarFlowActivities = [];
+let selectedPolarActivities = [];
 
 // Initialize
 document.addEventListener("DOMContentLoaded", () => {
@@ -61,8 +63,25 @@ document.addEventListener("DOMContentLoaded", () => {
         btn.addEventListener("click", () => switchLoginTab(btn.dataset.subtab));
     });
 
+    // Polar Flow event listeners
+    const polarStartDate = document.getElementById("polar-start-date");
+    const polarEndDate = document.getElementById("polar-end-date");
+    const polarQuick1Week = document.getElementById("polar-quick-1-week");
+    const polarQuick1Month = document.getElementById("polar-quick-1-month");
+    const polarFetchBtn = document.getElementById("polar-fetch-btn");
+    const polarSyncBtn = document.getElementById("polar-sync-btn");
+
+    if (polarStartDate) polarStartDate.valueAsDate = new Date();
+    if (polarEndDate) polarEndDate.valueAsDate = new Date();
+
+    if (polarQuick1Week) polarQuick1Week.addEventListener("click", setPolarQuick1Week);
+    if (polarQuick1Month) polarQuick1Month.addEventListener("click", setPolarQuick1Month);
+    if (polarFetchBtn) polarFetchBtn.addEventListener("click", fetchPolarActivities);
+    if (polarSyncBtn) polarSyncBtn.addEventListener("click", syncPolarTMFP);
+
     // Load food instances on startup
     loadFoodInstances();
+    checkPolarFlowStatus();
 });
 
 async function checkLoginStatus() {
@@ -502,4 +521,217 @@ function escapeHtml(text) {
     const div = document.createElement("div");
     div.textContent = text;
     return div.innerHTML;
+}
+
+// ============================================================================
+// POLAR FLOW FUNCTIONS
+// ============================================================================
+
+async function checkPolarFlowStatus() {
+    try {
+        console.log("🔌 Checking Polar Flow status...");
+        const response = await fetch("/api/polar-flow/status");
+        const data = await response.json();
+
+        const statusBox = document.getElementById("polar-flow-status");
+        const controls = document.getElementById("polar-flow-controls");
+
+        if (data.connected) {
+            statusBox.className = "status-box connected";
+            statusBox.innerHTML = `✅ Connected to Polar Flow as ${data.username}`;
+            controls.style.display = "block";
+            console.log("✅ Polar Flow connected");
+        } else if (data.configured) {
+            statusBox.className = "status-box error";
+            statusBox.innerHTML = `❌ ${data.message}`;
+            controls.style.display = "none";
+            console.warn("⚠️ Polar Flow configured but not connected:", data.message);
+        } else {
+            statusBox.className = "status-box";
+            statusBox.innerHTML = `⚠️ ${data.message}`;
+            controls.style.display = "none";
+            console.log("ℹ️ Polar Flow not configured:", data.message);
+        }
+    } catch (err) {
+        console.error("❌ Error checking Polar Flow status:", err);
+        const statusBox = document.getElementById("polar-flow-status");
+        statusBox.className = "status-box error";
+        statusBox.innerHTML = "❌ Error checking Polar Flow connection";
+    }
+}
+
+function setPolarQuick1Week() {
+    const endDate = new Date(document.getElementById("polar-end-date").valueAsDate || new Date());
+    const startDate = new Date(endDate);
+    startDate.setDate(startDate.getDate() - 7);
+
+    document.getElementById("polar-start-date").valueAsDate = startDate;
+    document.getElementById("polar-quick-1-week").classList.add("active");
+    document.getElementById("polar-quick-1-month").classList.remove("active");
+}
+
+function setPolarQuick1Month() {
+    const endDate = new Date(document.getElementById("polar-end-date").valueAsDate || new Date());
+    const startDate = new Date(endDate);
+    startDate.setMonth(startDate.getMonth() - 1);
+
+    document.getElementById("polar-start-date").valueAsDate = startDate;
+    document.getElementById("polar-quick-1-week").classList.remove("active");
+    document.getElementById("polar-quick-1-month").classList.add("active");
+}
+
+async function fetchPolarActivities() {
+    const startDate = document.getElementById("polar-start-date").value;
+    const endDate = document.getElementById("polar-end-date").value;
+
+    if (!startDate || !endDate) {
+        alert("Please select both start and end dates");
+        return;
+    }
+
+    try {
+        const fetchBtn = document.getElementById("polar-fetch-btn");
+        fetchBtn.disabled = true;
+        fetchBtn.textContent = "Fetching...";
+
+        console.log(`📥 Fetching Polar Flow activities from ${startDate} to ${endDate}`);
+
+        const response = await fetch(
+            `/api/polar-flow/activities?start_date=${startDate}&end_date=${endDate}`
+        );
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || "Failed to fetch activities");
+        }
+
+        const data = await response.json();
+        polarFlowActivities = data.activities || [];
+        console.log(`✅ Fetched ${polarFlowActivities.length} activities`);
+
+        displayPolarActivities();
+
+    } catch (err) {
+        console.error("❌ Error fetching activities:", err);
+        alert(`Error: ${err.message}`);
+    } finally {
+        const fetchBtn = document.getElementById("polar-fetch-btn");
+        fetchBtn.disabled = false;
+        fetchBtn.textContent = "Fetch Activities";
+    }
+}
+
+function displayPolarActivities() {
+    const listDiv = document.getElementById("polar-activities-list");
+    const container = document.getElementById("activities-container");
+
+    if (polarFlowActivities.length === 0) {
+        listDiv.style.display = "none";
+        alert("No activities found for the selected date range");
+        return;
+    }
+
+    container.innerHTML = "";
+    selectedPolarActivities = [];
+
+    polarFlowActivities.forEach((activity, idx) => {
+        const item = document.createElement("div");
+        item.className = "activity-item";
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = true;
+        checkbox.dataset.idx = idx;
+        checkbox.addEventListener("change", (e) => {
+            if (e.target.checked) {
+                if (!selectedPolarActivities.includes(idx)) {
+                    selectedPolarActivities.push(idx);
+                }
+            } else {
+                selectedPolarActivities = selectedPolarActivities.filter(i => i !== idx);
+            }
+        });
+
+        // Pre-select first activity
+        selectedPolarActivities.push(idx);
+
+        const content = document.createElement("div");
+        content.className = "activity-content";
+        content.innerHTML = `
+            <div class="activity-name">${escapeHtml(activity.name)}</div>
+            <div class="activity-details">
+                <span>📅 ${activity.date}</span>
+                <span>⏱️ ${activity.duration_minutes} minutes</span>
+                <span>🔥 ${Math.round(activity.calories)} kcal</span>
+            </div>
+        `;
+
+        item.appendChild(checkbox);
+        item.appendChild(content);
+        container.appendChild(item);
+    });
+
+    listDiv.style.display = "block";
+}
+
+async function syncPolarTMFP() {
+    if (!sessionId) {
+        alert("Must be logged into MyFitnessPal to sync activities");
+        return;
+    }
+
+    if (selectedPolarActivities.length === 0) {
+        alert("Please select at least one activity to sync");
+        return;
+    }
+
+    try {
+        const syncBtn = document.getElementById("polar-sync-btn");
+        const statusDiv = document.getElementById("polar-sync-status");
+
+        syncBtn.disabled = true;
+        syncBtn.textContent = "Syncing...";
+        statusDiv.className = "status-message info";
+        statusDiv.textContent = "Syncing activities to MFP...";
+
+        // Collect selected activities
+        const activitiesToSync = selectedPolarActivities.map(idx => polarFlowActivities[idx]);
+
+        console.log(`📤 Syncing ${activitiesToSync.length} activities to MFP`);
+
+        const response = await fetch("/api/polar-flow/sync-to-mfp", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${sessionId}`
+            },
+            body: JSON.stringify({ activities: activitiesToSync })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || "Sync failed");
+        }
+
+        const data = await response.json();
+
+        statusDiv.className = "status-message success";
+        if (data.error_count === 0) {
+            statusDiv.textContent = `✅ Successfully synced ${data.synced_count} activities to MFP!`;
+        } else {
+            statusDiv.textContent = `⚠️ Synced ${data.synced_count} activities, ${data.error_count} errors`;
+        }
+
+        console.log("✅ Sync completed:", data);
+
+    } catch (err) {
+        console.error("❌ Sync error:", err);
+        const statusDiv = document.getElementById("polar-sync-status");
+        statusDiv.className = "status-message error";
+        statusDiv.textContent = `❌ Error: ${err.message}`;
+    } finally {
+        const syncBtn = document.getElementById("polar-sync-btn");
+        syncBtn.disabled = false;
+        syncBtn.textContent = "Sync Selected to MFP";
+    }
 }

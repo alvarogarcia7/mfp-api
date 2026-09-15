@@ -22,6 +22,7 @@
             <div class="tab-navigation">
                 <button class="tab-nav-btn active" data-tab="food-instances">Food Library</button>
                 <button class="tab-nav-btn" data-tab="food-entries">Today's Entries</button>
+                <button class="tab-nav-btn" data-tab="polar-flow">Polar Flow</button>
                 <button class="tab-nav-btn" data-tab="login">Login (Optional)</button>
             </div>
 
@@ -124,6 +125,50 @@
                                 <ul id="snacks-entries" class="entries"></ul>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Polar Flow Tab -->
+                <div id="polar-flow-tab" class="tab-content">
+                    <h2>Polar Flow Integration</h2>
+                    <p class="tab-description">Sync cardio activities from Polar Flow to MyFitnessPal</p>
+
+                    <div id="polar-flow-status" class="status-box">
+                        <div class="loading">Checking Polar Flow connection...</div>
+                    </div>
+
+                    <div id="polar-flow-controls" style="display: none;">
+                        <div class="date-range-section">
+                            <h3>Download Activities</h3>
+                            <div class="date-range">
+                                <div class="date-input">
+                                    <label for="polar-start-date">Start Date:</label>
+                                    <input type="date" id="polar-start-date">
+                                </div>
+                                <div class="date-input">
+                                    <label for="polar-end-date">End Date:</label>
+                                    <input type="date" id="polar-end-date">
+                                </div>
+                            </div>
+
+                            <div class="quick-buttons">
+                                <label>Quick Options:</label>
+                                <button id="polar-quick-1-week" class="quick-btn">1 Week Before End Date</button>
+                                <button id="polar-quick-1-month" class="quick-btn">1 Month Before End Date</button>
+                            </div>
+
+                            <button id="polar-fetch-btn" class="action-btn primary">Fetch Activities</button>
+                        </div>
+
+                        <div id="polar-activities-list" class="activities-list" style="display: none;">
+                            <h3>Activities Found</h3>
+                            <div id="activities-container"></div>
+                            <button id="polar-sync-btn" class="action-btn primary" style="width: 100%; margin-top: 15px;">
+                                Sync Selected to MFP
+                            </button>
+                        </div>
+
+                        <div id="polar-sync-status" class="status-message"></div>
                     </div>
                 </div>
 
