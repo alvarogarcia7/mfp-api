@@ -1,6 +1,7 @@
 """FastAPI server for MyFitnessPal web app."""
 
 import asyncio
+import logging
 import uuid
 from datetime import date
 from typing import Annotated
@@ -9,7 +10,14 @@ from fastapi import FastAPI, HTTPException, Header, Depends, Body
 from fastapi.staticfiles import StaticFiles
 
 from vendor import mfp_client, diary
-from mfp_auth import login_mfp
+from mfp_auth import login_mfp_password, login_mfp_cookie
+
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
@@ -35,27 +43,83 @@ def get_client(session_id: str) -> mfp_client.CurlCffiClient:
 
 @app.post("/api/login")
 async def login(request: dict = Body(...)):
-    """Login with username/password, return session ID."""
+    """Login with username/password or session cookie, return session ID.
+
+    Supports two methods:
+    1. Username/Password: {"username": "...", "password": "..."}
+    2. Session Cookie: {"cookie": "..."}
+
+    Cookie can be:
+    - Raw token: abc123def456...
+    - Cookie header: __Secure-next-auth.session-token=abc123; ...
+    - Full header: Cookie: __Secure-next-auth.session-token=abc123; ...
+    """
+    logger.info(f"Login request received: {list(request.keys())}")
+
     username = request.get("username")
     password = request.get("password")
-    if not username or not password:
-        raise HTTPException(status_code=400, detail="Missing username or password")
+    cookie_input = request.get("cookie")
 
-    try:
-        cookies, mfp_username = await asyncio.to_thread(login_mfp, username, password)
-    except ValueError as e:
-        raise HTTPException(status_code=401, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Login error: {e}")
+    # Validate inputs
+    if not username and not password and not cookie_input:
+        logger.warning("Login attempted with no credentials")
+        raise HTTPException(
+            status_code=400,
+            detail="Provide either username/password or session cookie"
+        )
+
+    if cookie_input:
+        logger.info("Attempting cookie-based login")
+        try:
+            cookies, mfp_username = await asyncio.to_thread(
+                login_mfp_cookie, cookie_input
+            )
+            logger.info(f"Cookie login successful for: {mfp_username}")
+        except ValueError as e:
+            logger.error(f"Cookie login failed: {e}")
+            raise HTTPException(status_code=401, detail=str(e))
+        except Exception as e:
+            logger.error(f"Cookie login error: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"Cookie login error: {e}")
+
+    elif username and password:
+        logger.info(f"Attempting password login for: {username}")
+        if not username or not password:
+            logger.warning("Password login attempted with missing fields")
+            raise HTTPException(status_code=400, detail="Missing username or password")
+
+        try:
+            cookies, mfp_username = await asyncio.to_thread(
+                login_mfp_password, username, password
+            )
+            logger.info(f"Password login successful for: {mfp_username}")
+        except ValueError as e:
+            logger.error(f"Password login failed: {e}")
+            raise HTTPException(status_code=401, detail=str(e))
+        except Exception as e:
+            logger.error(f"Password login error: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"Login error: {e}")
+    else:
+        logger.warning("Incomplete login credentials")
+        raise HTTPException(
+            status_code=400,
+            detail="Provide complete username/password or a valid cookie"
+        )
 
     # Create session and store client
     session_id = str(uuid.uuid4())
+    logger.debug(f"Creating session: {session_id}")
+
     try:
         client = mfp_client.build_client(cookies, username=mfp_username)
+        logger.debug(f"Built MFP client for: {mfp_username}")
     except Exception as e:
+        logger.error(f"Failed to build MFP client: {e}", exc_info=True)
         raise HTTPException(status_code=401, detail=f"Auth failed: {e}")
 
     _sessions[session_id] = client
+    logger.info(f"Session created: {session_id} for user: {mfp_username}")
+
     return {"session_id": session_id, "username": mfp_username}
 
 

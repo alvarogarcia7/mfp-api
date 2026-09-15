@@ -6,10 +6,15 @@ let currentMeal = "breakfast";
 const loginScreen = document.getElementById("login-screen");
 const dashboardScreen = document.getElementById("dashboard-screen");
 const loginForm = document.getElementById("login-form");
+const cookieForm = document.getElementById("cookie-form");
 const usernameInput = document.getElementById("username");
 const passwordInput = document.getElementById("password");
+const cookieInput = document.getElementById("cookie-input");
 const loginError = document.getElementById("login-error");
+const cookieError = document.getElementById("cookie-error");
 const logoutBtn = document.getElementById("logout-btn");
+const tabBtns = document.querySelectorAll(".tab-btn");
+const loginTabs = document.querySelectorAll(".login-tab");
 const mealSelect = document.getElementById("meal-select");
 const foodInput = document.getElementById("food-input");
 const searchBtn = document.getElementById("search-btn");
@@ -29,6 +34,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Event listeners
     loginForm.addEventListener("submit", handleLogin);
+    cookieForm.addEventListener("submit", handleCookieLogin);
     logoutBtn.addEventListener("click", handleLogout);
     mealSelect.addEventListener("change", (e) => {
         currentMeal = e.target.value;
@@ -38,7 +44,39 @@ document.addEventListener("DOMContentLoaded", () => {
         if (e.key === "Enter") handleSearch();
     });
     refreshBtn.addEventListener("click", loadToday);
+
+    // Tab switching
+    tabBtns.forEach(btn => {
+        btn.addEventListener("click", () => {
+            const tabName = btn.dataset.tab;
+            switchTab(tabName);
+        });
+    });
 });
+
+function switchTab(tabName) {
+    // Update button states
+    tabBtns.forEach(btn => {
+        if (btn.dataset.tab === tabName) {
+            btn.classList.add("active");
+        } else {
+            btn.classList.remove("active");
+        }
+    });
+
+    // Show/hide forms
+    loginTabs.forEach(tab => {
+        if (tab.dataset.tab === tabName) {
+            tab.classList.add("active");
+        } else {
+            tab.classList.remove("active");
+        }
+    });
+
+    // Clear errors
+    loginError.textContent = "";
+    cookieError.textContent = "";
+}
 
 function showLogin() {
     loginScreen.classList.add("active");
@@ -62,16 +100,44 @@ async function handleLogin(e) {
         return;
     }
 
+    await performLogin({ username, password }, loginError);
+
+    if (sessionId) {
+        usernameInput.value = "";
+        passwordInput.value = "";
+    }
+}
+
+async function handleCookieLogin(e) {
+    e.preventDefault();
+    cookieError.textContent = "";
+
+    const cookie = cookieInput.value.trim();
+
+    if (!cookie) {
+        cookieError.textContent = "Please paste your session cookie";
+        return;
+    }
+
+    await performLogin({ cookie }, cookieError);
+
+    if (sessionId) {
+        cookieInput.value = "";
+    }
+}
+
+async function performLogin(credentials, errorElement) {
     try {
         const response = await fetch("/api/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username, password }),
+            body: JSON.stringify(credentials),
         });
 
         if (!response.ok) {
             const error = await response.json();
-            loginError.textContent = error.detail || "Login failed";
+            errorElement.textContent = error.detail || "Login failed";
+            console.error("Login error:", error);
             return;
         }
 
@@ -79,12 +145,12 @@ async function handleLogin(e) {
         sessionId = data.session_id;
         localStorage.setItem("sessionId", sessionId);
 
-        usernameInput.value = "";
-        passwordInput.value = "";
+        console.log("Login successful, session:", sessionId);
         showDashboard();
         loadToday();
     } catch (err) {
-        loginError.textContent = `Error: ${err.message}`;
+        errorElement.textContent = `Error: ${err.message}`;
+        console.error("Login error:", err);
     }
 }
 
