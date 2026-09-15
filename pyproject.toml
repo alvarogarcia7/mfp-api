@@ -2,9 +2,9 @@
 name = "myfitnesspal-api"
 version = "0.1.0"
 description = "Self-hosted MyFitnessPal web app with login and food logging"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<=3.13"
 authors = [{ name = "Your Name" }]
-license = { text = "MIT" }
+license = "MIT"
 
 dependencies = [
     "fastapi>=0.110",
@@ -22,9 +22,10 @@ dev = [
     "httpx>=0.26",
 ]
 
-[tool.uv]
-python-version = "3.10"
 
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["backend"]

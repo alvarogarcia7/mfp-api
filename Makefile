@@ -23,6 +23,8 @@ help:
 ## Install all dependencies (dev + prod)
 install:
 	@echo "Installing dependencies with uv..."
+	uv venv --python 3.13
+	uv sync
 	uv pip install --upgrade pip
 	uv pip install -e .
 	uv pip install -e ".[dev]"
