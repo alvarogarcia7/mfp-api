@@ -10,6 +10,7 @@ from typing import Annotated
 
 from fastapi import FastAPI, HTTPException, Header, Depends, Body
 from fastapi.staticfiles import StaticFiles
+from jsonschema import validate, ValidationError
 
 from vendor import mfp_client, diary
 from mfp_auth import login_mfp_password, login_mfp_cookie
@@ -29,6 +30,9 @@ _sessions: dict[str, mfp_client.CurlCffiClient] = {}
 # Food database file path
 FOOD_DB_FILE = Path(__file__).parent / ".food_cache.json"
 
+# Food schema file path
+FOOD_SCHEMA_FILE = Path(__file__).parent / "food_schema.json"
+
 # Entries file path
 ENTRIES_DIR = Path(__file__).parent.parent / "data" / "food"
 ENTRIES_FILE = ENTRIES_DIR / "entries.json"
@@ -36,6 +40,24 @@ ENTRIES_FILE = ENTRIES_DIR / "entries.json"
 # Credentials file path
 CREDENTIALS_DIR = Path(__file__).parent.parent / "data" / "user"
 CREDENTIALS_FILE = CREDENTIALS_DIR / "credentials.json"
+
+# Load food schema at startup
+_food_schema = None
+
+def _load_food_schema() -> dict:
+    """Load and cache the food schema."""
+    global _food_schema
+    if _food_schema is not None:
+        return _food_schema
+
+    try:
+        with open(FOOD_SCHEMA_FILE, 'r') as f:
+            _food_schema = json.load(f)
+        logger.info("Loaded food schema")
+        return _food_schema
+    except Exception as e:
+        logger.error(f"Failed to load food schema: {e}")
+        raise RuntimeError(f"Cannot start without food schema: {e}")
 
 
 def get_session_id(authorization: Annotated[str | None, Header()] = None) -> str:
@@ -335,14 +357,37 @@ def _load_food_cache() -> list[dict] | None:
         return None
 
 
-def _save_food_cache(foods: list[dict]) -> None:
-    """Save food database to JSON file."""
+def _validate_food(food: dict, index: int = None) -> bool:
+    """Validate a food item against the schema.
+
+    Raises ValidationError if the food doesn't match the schema.
+    """
+    schema = _load_food_schema()
     try:
+        validate(instance=food, schema=schema)
+        return True
+    except ValidationError as e:
+        prefix = f"Food {index}: " if index is not None else ""
+        logger.error(f"{prefix}Validation error: {e.message}")
+        raise
+
+
+def _save_food_cache(foods: list[dict]) -> None:
+    """Save food database to JSON file, validating each item first."""
+    try:
+        # Validate all foods before saving
+        for idx, food in enumerate(foods):
+            _validate_food(food, index=idx)
+
         with open(FOOD_DB_FILE, 'w') as f:
             json.dump(foods, f, indent=2)
-        logger.info(f"Saved {len(foods)} foods to cache file")
+        logger.info(f"Saved {len(foods)} foods to cache file (all validated)")
+    except ValidationError as e:
+        logger.error(f"Food cache save failed: validation error - {e.message}")
+        raise
     except Exception as e:
         logger.error(f"Error saving food cache: {e}")
+        raise
 
 
 def _load_entries() -> dict:
@@ -358,14 +403,24 @@ def _load_entries() -> dict:
 
 
 def _save_entries(entries_data: dict) -> None:
-    """Save diary entries to JSON file."""
+    """Save diary entries to JSON file, validating food items first."""
     try:
+        # Validate all food items in entries
+        for entry_idx, entry in enumerate(entries_data.get("entries", [])):
+            for meal_name, meal_foods in entry.get("meals", {}).items():
+                for food_idx, food in enumerate(meal_foods):
+                    _validate_food(food, index=f"entry[{entry_idx}].meals[{meal_name}][{food_idx}]")
+
         ENTRIES_DIR.mkdir(parents=True, exist_ok=True)
         with open(ENTRIES_FILE, 'w') as f:
             json.dump(entries_data, f, indent=2)
-        logger.info(f"Saved entries to {ENTRIES_FILE}")
+        logger.info(f"Saved entries to {ENTRIES_FILE} (all validated)")
+    except ValidationError as e:
+        logger.error(f"Entries save failed: validation error - {e.message}")
+        raise
     except Exception as e:
         logger.error(f"Error saving entries: {e}")
+        raise
 
 
 def _load_credentials() -> dict:

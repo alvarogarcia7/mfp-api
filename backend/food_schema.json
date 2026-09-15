@@ -1,0 +1,108 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Food Database Schema",
+  "description": "Schema for food items stored in the local database",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Food item name",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "calories": {
+      "type": "number",
+      "description": "Calories per standard serving (in grams/ml)",
+      "minimum": 0,
+      "maximum": 1000000
+    },
+    "protein": {
+      "type": ["number", "null"],
+      "description": "Protein in grams",
+      "minimum": 0,
+      "maximum": 1000
+    },
+    "carbs": {
+      "type": ["number", "null"],
+      "description": "Carbohydrates in grams",
+      "minimum": 0,
+      "maximum": 1000
+    },
+    "fat": {
+      "type": ["number", "null"],
+      "description": "Fat in grams",
+      "minimum": 0,
+      "maximum": 1000
+    },
+    "fiber": {
+      "type": ["number", "null"],
+      "description": "Dietary fiber in grams",
+      "minimum": 0,
+      "maximum": 1000
+    },
+    "sugar": {
+      "type": ["number", "null"],
+      "description": "Sugar in grams",
+      "minimum": 0,
+      "maximum": 1000
+    },
+    "sodium": {
+      "type": ["number", "null"],
+      "description": "Sodium in milligrams",
+      "minimum": 0,
+      "maximum": 1000000
+    },
+    "cholesterol": {
+      "type": ["number", "null"],
+      "description": "Cholesterol in milligrams",
+      "minimum": 0,
+      "maximum": 1000
+    },
+    "saturated_fat": {
+      "type": ["number", "null"],
+      "description": "Saturated fat in grams",
+      "minimum": 0,
+      "maximum": 1000
+    },
+    "potassium": {
+      "type": ["number", "null"],
+      "description": "Potassium in milligrams",
+      "minimum": 0,
+      "maximum": 1000000
+    },
+    "unit": {
+      "type": "string",
+      "description": "Measurement unit (typically grams or milliliters)",
+      "enum": ["g", "ml"],
+      "default": "g"
+    },
+    "food_id": {
+      "type": ["string", "null"],
+      "description": "MyFitnessPal food ID for API lookups",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "weight_id": {
+      "type": ["string", "null"],
+      "description": "MyFitnessPal weight ID for API lookups",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "brand": {
+      "type": ["string", "null"],
+      "description": "Brand name if applicable",
+      "maxLength": 500
+    },
+    "verified": {
+      "type": ["boolean", "null"],
+      "description": "Whether the food data is verified by MyFitnessPal"
+    },
+    "serving": {
+      "type": ["string", "null"],
+      "description": "Serving size description",
+      "maxLength": 200
+    }
+  },
+  "required": ["name", "calories", "unit"],
+  "additionalProperties": false
+}
