@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyFitnessPal</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div id="app">
+        <div id="login-screen" class="screen active">
+            <div class="login-container">
+                <h1>MyFitnessPal</h1>
+                <form id="login-form">
+                    <input type="text" id="username" placeholder="Username or Email" required>
+                    <input type="password" id="password" placeholder="Password" required>
+                    <button type="submit">Log In</button>
+                    <div id="login-error" class="error"></div>
+                </form>
+            </div>
+        </div>
+
+        <div id="dashboard-screen" class="screen">
+            <div class="header">
+                <h1>MyFitnessPal</h1>
+                <button id="logout-btn" class="logout-btn">Log Out</button>
+            </div>
+
+            <div class="dashboard">
+                <!-- Calorie Summary -->
+                <div class="calorie-summary">
+                    <div class="date-header" id="date-header"></div>
+                    <div class="calorie-bar">
+                        <div class="bar-labels">
+                            <span id="eaten-label">0</span>
+                            <span id="goal-label">2000</span>
+                        </div>
+                        <div class="bar-container">
+                            <div id="eaten-bar" class="eaten-bar"></div>
+                            <div id="goal-marker" class="goal-marker"></div>
+                        </div>
+                    </div>
+                    <div class="calorie-stats">
+                        <div class="stat">
+                            <span class="label">Eaten</span>
+                            <span id="eaten-val" class="value">0</span>
+                        </div>
+                        <div class="stat">
+                            <span class="label">Exercise</span>
+                            <span id="exercise-val" class="value">0</span>
+                        </div>
+                        <div class="stat">
+                            <span class="label">Remaining</span>
+                            <span id="remaining-val" class="value">2000</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Food Input -->
+                <div class="food-input-section">
+                    <div class="meal-selector">
+                        <label for="meal-select">Meal:</label>
+                        <select id="meal-select">
+                            <option value="breakfast">Breakfast</option>
+                            <option value="lunch">Lunch</option>
+                            <option value="dinner">Dinner</option>
+                            <option value="snacks">Snacks</option>
+                        </select>
+                    </div>
+                    <div class="input-row">
+                        <input type="text" id="food-input" placeholder='e.g. "lettuce 85" or "chicken breast 150g"'>
+                        <button id="search-btn">Search</button>
+                    </div>
+                </div>
+
+                <!-- Search Results -->
+                <div id="search-results" class="search-results" style="display: none;">
+                    <h3>Select a food:</h3>
+                    <div id="results-list"></div>
+                </div>
+
+                <!-- Food Log -->
+                <div class="food-log">
+                    <h2>Today's Log</h2>
+                    <div id="meals-container">
+                        <div class="meal-group">
+                            <h3>Breakfast</h3>
+                            <ul id="breakfast-entries" class="entries"></ul>
+                        </div>
+                        <div class="meal-group">
+                            <h3>Lunch</h3>
+                            <ul id="lunch-entries" class="entries"></ul>
+                        </div>
+                        <div class="meal-group">
+                            <h3>Dinner</h3>
+                            <ul id="dinner-entries" class="entries"></ul>
+                        </div>
+                        <div class="meal-group">
+                            <h3>Snacks</h3>
+                            <ul id="snacks-entries" class="entries"></ul>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="refresh-btn" class="refresh-btn">Refresh</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/app.js"></script>
+</body>
+</html>
