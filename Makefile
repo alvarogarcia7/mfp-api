@@ -39,6 +39,7 @@ install-prod:
 run:
 	@PORT=$$(( (RANDOM % 8000) + 8000 )); \
 	echo "Starting MyFitnessPal API server on http://localhost:$$PORT"; \
+	open http://0.0.0.0:$$PORT; \
 	cd backend && uvicorn main:app --reload --host 0.0.0.0 --port $$PORT
 
 ## Start the development server (production mode, 4 workers)
