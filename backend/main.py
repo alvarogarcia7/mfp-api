@@ -29,6 +29,10 @@ _sessions: dict[str, mfp_client.CurlCffiClient] = {}
 # Food database file path
 FOOD_DB_FILE = Path(__file__).parent / ".food_cache.json"
 
+# Entries file path
+ENTRIES_DIR = Path(__file__).parent.parent / "data" / "food"
+ENTRIES_FILE = ENTRIES_DIR / "entries.json"
+
 
 def get_session_id(authorization: Annotated[str | None, Header()] = None) -> str:
     """Extract session ID from Authorization header."""
@@ -183,6 +187,30 @@ async def get_today(session_id: str = Depends(get_session_id)):
 
     try:
         result = await asyncio.to_thread(fetch_data)
+
+        # Save entries to disk
+        def save_entries_to_disk():
+            entries_data = _load_entries()
+            today_str = date.today().isoformat()
+
+            # Find and update entry for today, or add new one
+            found = False
+            for entry in entries_data.get("entries", []):
+                if entry.get("date") == today_str:
+                    entry["meals"] = result.get("meals", {})
+                    found = True
+                    break
+
+            if not found:
+                entries_data["entries"].append({
+                    "date": today_str,
+                    "meals": result.get("meals", {}),
+                })
+
+            entries_data["last_updated"] = date.today().isoformat()
+            _save_entries(entries_data)
+
+        await asyncio.to_thread(save_entries_to_disk)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Fetch error: {e}")
@@ -308,6 +336,29 @@ def _save_food_cache(foods: list[dict]) -> None:
         logger.info(f"Saved {len(foods)} foods to cache file")
     except Exception as e:
         logger.error(f"Error saving food cache: {e}")
+
+
+def _load_entries() -> dict:
+    """Load diary entries from JSON file."""
+    if not ENTRIES_FILE.exists():
+        return {"last_updated": None, "entries": []}
+    try:
+        with open(ENTRIES_FILE, 'r') as f:
+            return json.load(f)
+    except Exception as e:
+        logger.warning(f"Error loading entries: {e}")
+        return {"last_updated": None, "entries": []}
+
+
+def _save_entries(entries_data: dict) -> None:
+    """Save diary entries to JSON file."""
+    try:
+        ENTRIES_DIR.mkdir(parents=True, exist_ok=True)
+        with open(ENTRIES_FILE, 'w') as f:
+            json.dump(entries_data, f, indent=2)
+        logger.info(f"Saved entries to {ENTRIES_FILE}")
+    except Exception as e:
+        logger.error(f"Error saving entries: {e}")
 
 
 def _fetch_foods_for_range(client, start_date: date, end_date: date) -> list[dict]:
