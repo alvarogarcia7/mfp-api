@@ -9,6 +9,7 @@ const loginForm = document.getElementById("login-form");
 const cookieForm = document.getElementById("cookie-form");
 const usernameInput = document.getElementById("username");
 const passwordInput = document.getElementById("password");
+const cookieUsernameInput = document.getElementById("cookie-username");
 const cookieInput = document.getElementById("cookie-input");
 const loginError = document.getElementById("login-error");
 const cookieError = document.getElementById("cookie-error");
@@ -112,16 +113,23 @@ async function handleCookieLogin(e) {
     e.preventDefault();
     cookieError.textContent = "";
 
+    const username = cookieUsernameInput.value.trim();
     const cookie = cookieInput.value.trim();
+
+    if (!username) {
+        cookieError.textContent = "Please enter your MyFitnessPal username";
+        return;
+    }
 
     if (!cookie) {
         cookieError.textContent = "Please paste your session cookie";
         return;
     }
 
-    await performLogin({ cookie }, cookieError);
+    await performLogin({ username, cookie }, cookieError);
 
     if (sessionId) {
+        cookieUsernameInput.value = "";
         cookieInput.value = "";
     }
 }

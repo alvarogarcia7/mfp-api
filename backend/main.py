@@ -70,9 +70,12 @@ async def login(request: dict = Body(...)):
 
     if cookie_input:
         logger.info("Attempting cookie-based login")
+        if not username:
+            logger.warning("Cookie login attempted without username")
+            raise HTTPException(status_code=400, detail="Username required for cookie login")
         try:
             cookies, mfp_username = await asyncio.to_thread(
-                login_mfp_cookie, cookie_input
+                login_mfp_cookie, cookie_input, username
             )
             logger.info(f"Cookie login successful for: {mfp_username}")
         except ValueError as e:

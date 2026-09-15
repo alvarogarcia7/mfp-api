@@ -99,15 +99,22 @@ def login_mfp_password(username: str, password: str) -> tuple[dict[str, str], st
         raise
 
 
-def login_mfp_cookie(cookie_input: str) -> tuple[dict[str, str], str]:
-    """Login with existing session cookie, validate it works.
+def login_mfp_cookie(cookie_input: str, username: str) -> tuple[dict[str, str], str]:
+    """Login with existing session cookie and username, validate it works.
+
+    Args:
+        cookie_input: Session cookie (raw token or cookie header)
+        username: MyFitnessPal username
 
     Returns (cookies_dict, mfp_username).
     Raises ValueError if cookie is invalid.
     """
-    logger.info("Attempting cookie-based login")
+    logger.info(f"Attempting cookie-based login for user: {username}")
 
     try:
+        if not username:
+            raise ValueError("Username is required for cookie login")
+
         cookies = parse_cookie_input(cookie_input)
         logger.debug(f"Parsed cookies: {list(cookies.keys())}")
 
@@ -116,18 +123,15 @@ def login_mfp_cookie(cookie_input: str) -> tuple[dict[str, str], str]:
             raise ValueError("Invalid cookie: missing session token")
 
         # Validate the cookie by building a client with it
-        logger.debug("Building MyFitnessPal client with provided cookies")
+        logger.debug(f"Building MyFitnessPal client with provided cookies for user: {username}")
         try:
-            client = mfp_client.build_client(cookies)
+            client = mfp_client.build_client(cookies, username=username)
             logger.debug("Client built successfully")
         except Exception as e:
             logger.error(f"Failed to build client: {e}")
             raise ValueError(f"Cookie validation failed: {e}")
 
-        # Get the effective username from the client
-        username = client.effective_username
-        logger.info(f"Cookie validated, logged in as: {username}")
-
+        logger.info(f"Cookie validated for user: {username}")
         return cookies, username
 
     except ValueError as e:
