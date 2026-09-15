@@ -17,21 +17,36 @@ A self-hosted web application for logging food and tracking calories, built on t
 
 ## Quick Start
 
+### Prerequisites
+- Python 3.10+
+- `uv` for dependency management (`pip install uv`)
+
+### Using Make (Recommended)
+
+```bash
+make install  # Install dependencies
+make run      # Start the server
+make test     # Run tests
+```
+
+### Manual Setup
+
 ```bash
 # Install dependencies
-cd backend
-pip install -r requirements.txt
+uv pip install -e .
 
 # Start the server
+cd backend
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Then open `http://localhost:8000` in your browser.
+### Quick Start Script
 
-Or use the provided script:
 ```bash
 ./run.sh
 ```
+
+Then open `http://localhost:8000` in your browser.
 
 ## API Endpoints
 

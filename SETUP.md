@@ -24,13 +24,25 @@ myfitnesspal-api/
 
 ### Prerequisites
 - Python 3.10 or higher
-- pip
+- `uv` for dependency management
 
-### Install Dependencies
+### Install uv
 
 ```bash
-cd backend
-pip install -r requirements.txt
+pip install uv
+```
+
+### Install Project Dependencies
+
+Using Make:
+```bash
+make install
+```
+
+Or manually:
+```bash
+uv pip install -e .        # Install production dependencies
+uv pip install -e ".[dev]" # Install dev dependencies including tests
 ```
 
 **Note**: `curl-cffi` requires a C compiler. On some systems, you may need:
@@ -40,12 +52,17 @@ pip install -r requirements.txt
 
 ## Running the Server
 
-### Option 1: Using the startup script
+### Option 1: Using Make (Recommended)
+```bash
+make run
+```
+
+### Option 2: Using the startup script
 ```bash
 ./run.sh
 ```
 
-### Option 2: Manual startup
+### Option 3: Manual startup
 ```bash
 cd backend
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
@@ -53,7 +70,24 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 The app will be available at `http://localhost:8000`
 
-## Testing
+## Running Tests
+
+```bash
+# Using Make (recommended)
+make test
+
+# Or manually
+pytest tests/ -v
+```
+
+Tests verify:
+- API endpoint status codes
+- Authentication validation
+- Input validation
+- Session management
+- Vendored module functionality
+
+## Testing Endpoints Manually
 
 ### 1. Health Check
 ```bash

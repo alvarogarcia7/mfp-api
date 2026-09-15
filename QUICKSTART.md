@@ -6,10 +6,15 @@
 # 1. Navigate to the project directory
 cd myfitnesspal-api
 
-# 2. Install dependencies
-cd backend && pip install -r requirements.txt && cd ..
+# 2. Install uv (if not already installed)
+pip install uv
 
 # 3. Start the server
+make run
+```
+
+Or use the quick-start script:
+```bash
 ./run.sh
 ```
 
@@ -27,17 +32,19 @@ Open your browser to **http://localhost:8000**
 ## Common Commands
 
 ```bash
-# Start with auto-reload (for development)
-cd backend && uvicorn main:app --reload
+# Using Makefile
+make run           # Start development server with auto-reload
+make test          # Run tests
+make install       # Install all dependencies (dev + prod)
+make install-prod  # Install only production dependencies
+make clean         # Clean build artifacts
+make lint          # Check Python syntax
+make help          # Show all available targets
 
-# Start on a different port
-cd backend && uvicorn main:app --port 5000
-
-# Install only production dependencies
-pip install -r requirements.txt
-
-# Test the API
-curl http://localhost:8000/docs  # Interactive API documentation
+# Manual commands
+uv pip install -e .          # Install production dependencies
+uv pip install -e ".[dev]"   # Install dev dependencies
+pytest tests/                # Run tests directly
 ```
 
 ## How Food Input Works
