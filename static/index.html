@@ -31,9 +31,78 @@
                 <div id="food-instances-tab" class="tab-content active">
                     <h2>Food Library</h2>
                     <p class="tab-description">All available foods in your local database</p>
-                    <div id="food-instances-list" class="food-list">
+
+                    <!-- Filter and Sort Controls -->
+                    <div class="food-library-controls">
+                        <div class="search-section">
+                            <div class="search-input-group">
+                                <input type="text" id="food-search-input" placeholder="Search foods..." class="food-search-input">
+                                <div class="search-type-toggle">
+                                    <label>
+                                        <input type="radio" name="search-type" value="normal" checked>
+                                        Normal
+                                    </label>
+                                    <label>
+                                        <input type="radio" name="search-type" value="regex">
+                                        Regex
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sort-section">
+                            <label for="food-sort-select">Sort by:</label>
+                            <select id="food-sort-select" class="food-sort-select">
+                                <option value="name">Name (A-Z)</option>
+                                <option value="name-desc">Name (Z-A)</option>
+                                <option value="calories">Calories (Low to High)</option>
+                                <option value="calories-desc">Calories (High to Low)</option>
+                                <option value="protein">Protein (Low to High)</option>
+                                <option value="protein-desc">Protein (High to Low)</option>
+                                <option value="carbs">Carbs (Low to High)</option>
+                                <option value="carbs-desc">Carbs (High to Low)</option>
+                                <option value="fat">Fat (Low to High)</option>
+                                <option value="fat-desc">Fat (High to Low)</option>
+                            </select>
+                        </div>
+
+                        <div class="view-section">
+                            <label>View:</label>
+                            <button id="food-view-table" class="view-btn active" data-view="table" title="Table View">
+                                📊 Table
+                            </button>
+                            <button id="food-view-cards" class="view-btn" data-view="cards" title="Card View">
+                                🃏 Cards
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Food Table View -->
+                    <div id="food-table-container" class="food-table-container">
+                        <table id="food-table" class="food-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Measurement</th>
+                                    <th>Calories</th>
+                                    <th>Protein (g)</th>
+                                    <th>Carbs (g)</th>
+                                    <th>Fat (g)</th>
+                                    <th>Fiber (g)</th>
+                                    <th>Sugar (g)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="food-table-body">
+                                <tr><td colspan="8" class="loading">Loading food database...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Food Card View -->
+                    <div id="food-instances-list" class="food-list" style="display: none;">
                         <div class="loading">Loading food database...</div>
                     </div>
+
                     <div id="food-instances-count" class="count-badge"></div>
                 </div>
 

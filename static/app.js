@@ -27,6 +27,8 @@ const caloriesSummary = document.getElementById("calorie-summary");
 let currentFoodItems = [];
 let polarFlowActivities = [];
 let selectedPolarActivities = [];
+let currentFoodView = "table";  // "table" or "cards"
+let filteredFoodDatabase = [];
 
 // Initialize
 document.addEventListener("DOMContentLoaded", () => {
@@ -78,6 +80,36 @@ document.addEventListener("DOMContentLoaded", () => {
     if (polarQuick1Month) polarQuick1Month.addEventListener("click", setPolarQuick1Month);
     if (polarFetchBtn) polarFetchBtn.addEventListener("click", fetchPolarActivities);
     if (polarSyncBtn) polarSyncBtn.addEventListener("click", syncPolarTMFP);
+
+    // Food Library controls
+    const foodSearchInput = document.getElementById("food-search-input");
+    const foodSearchTypeRadios = document.querySelectorAll("input[name='search-type']");
+    const foodSortSelect = document.getElementById("food-sort-select");
+    const foodViewBtns = document.querySelectorAll(".view-btn");
+
+    if (foodSearchInput) {
+        foodSearchInput.addEventListener("input", () => {
+            applyFoodFiltersAndSort();
+        });
+    }
+
+    foodSearchTypeRadios.forEach(radio => {
+        radio.addEventListener("change", () => {
+            applyFoodFiltersAndSort();
+        });
+    });
+
+    if (foodSortSelect) {
+        foodSortSelect.addEventListener("change", () => {
+            applyFoodFiltersAndSort();
+        });
+    }
+
+    foodViewBtns.forEach(btn => {
+        btn.addEventListener("click", () => {
+            switchFoodView(btn.dataset.view);
+        });
+    });
 
     // Load food instances on startup
     loadFoodInstances();
@@ -182,10 +214,56 @@ async function loadFoodInstances() {
 }
 
 function displayFoodInstances(foods) {
+    // Update count
+    foodInstancesCount.textContent = `Total: ${foods.length} foods`;
+
+    if (foods.length === 0) {
+        if (currentFoodView === "table") {
+            document.getElementById("food-table-body").innerHTML = '<tr><td colspan="8" class="no-results">No foods in database</td></tr>';
+        } else {
+            foodInstancesList.innerHTML = '<div class="empty-state">No foods in database. Add foods in the "Today\'s Entries" tab.</div>';
+        }
+        return;
+    }
+
+    if (currentFoodView === "table") {
+        displayFoodTable(foods);
+    } else {
+        displayFoodCards(foods);
+    }
+}
+
+function displayFoodTable(foods) {
+    const tbody = document.getElementById("food-table-body");
+    tbody.innerHTML = "";
+
+    if (foods.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="no-results">No foods match your search</td></tr>';
+        return;
+    }
+
+    foods.forEach(food => {
+        const tr = document.createElement("tr");
+        const measurement = food.measurement ? `${food.measurement.value}${food.measurement.unit}` : "N/A";
+        tr.innerHTML = `
+            <td>${escapeHtml(food.name)}</td>
+            <td class="measurement">${measurement}</td>
+            <td class="numeric">${Math.round(food.calories)}</td>
+            <td class="numeric">${food.protein ? Math.round(food.protein) : '-'}</td>
+            <td class="numeric">${food.carbs ? Math.round(food.carbs) : '-'}</td>
+            <td class="numeric">${food.fat ? Math.round(food.fat) : '-'}</td>
+            <td class="numeric">${food.fiber ? Math.round(food.fiber) : '-'}</td>
+            <td class="numeric">${food.sugar ? Math.round(food.sugar) : '-'}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function displayFoodCards(foods) {
     foodInstancesList.innerHTML = "";
 
     if (foods.length === 0) {
-        foodInstancesList.innerHTML = '<div class="empty-state">No foods in database. Add foods in the "Today\'s Entries" tab.</div>';
+        foodInstancesList.innerHTML = '<div class="empty-state">No foods match your search</div>';
         return;
     }
 
@@ -734,4 +812,121 @@ async function syncPolarTMFP() {
         syncBtn.disabled = false;
         syncBtn.textContent = "Sync Selected to MFP";
     }
+}
+
+// ============================================================================
+// FOOD LIBRARY FILTERING AND SORTING
+// ============================================================================
+
+function applyFoodFiltersAndSort() {
+    const searchInput = document.getElementById("food-search-input").value.trim();
+    const searchType = document.querySelector("input[name='search-type']:checked").value;
+    const sortType = document.getElementById("food-sort-select").value;
+
+    let filtered = [...localFoodDatabase];
+
+    // Apply search filter
+    if (searchInput) {
+        filtered = filterFoods(filtered, searchInput, searchType);
+    }
+
+    // Apply sorting
+    filtered = sortFoods(filtered, sortType);
+
+    // Update display
+    filteredFoodDatabase = filtered;
+    displayFoodInstances(filtered);
+}
+
+function filterFoods(foods, query, searchType) {
+    if (searchType === "regex") {
+        // Regex search
+        try {
+            const regex = new RegExp(query, "i");
+            return foods.filter(food =>
+                regex.test(food.name) ||
+                regex.test(food.brand || "") ||
+                regex.test(food.type || "")
+            );
+        } catch (err) {
+            console.error("❌ Invalid regex:", err);
+            alert(`Invalid regex pattern: ${err.message}`);
+            return foods;
+        }
+    } else {
+        // Normal text search
+        const lowerQuery = query.toLowerCase();
+        return foods.filter(food =>
+            food.name.toLowerCase().includes(lowerQuery) ||
+            (food.brand && food.brand.toLowerCase().includes(lowerQuery)) ||
+            (food.type && food.type.toLowerCase().includes(lowerQuery))
+        );
+    }
+}
+
+function sortFoods(foods, sortType) {
+    const sorted = [...foods];
+
+    switch (sortType) {
+        case "name":
+            sorted.sort((a, b) => a.name.localeCompare(b.name));
+            break;
+        case "name-desc":
+            sorted.sort((a, b) => b.name.localeCompare(a.name));
+            break;
+        case "calories":
+            sorted.sort((a, b) => (a.calories || 0) - (b.calories || 0));
+            break;
+        case "calories-desc":
+            sorted.sort((a, b) => (b.calories || 0) - (a.calories || 0));
+            break;
+        case "protein":
+            sorted.sort((a, b) => (a.protein || 0) - (b.protein || 0));
+            break;
+        case "protein-desc":
+            sorted.sort((a, b) => (b.protein || 0) - (a.protein || 0));
+            break;
+        case "carbs":
+            sorted.sort((a, b) => (a.carbs || 0) - (b.carbs || 0));
+            break;
+        case "carbs-desc":
+            sorted.sort((a, b) => (b.carbs || 0) - (a.carbs || 0));
+            break;
+        case "fat":
+            sorted.sort((a, b) => (a.fat || 0) - (b.fat || 0));
+            break;
+        case "fat-desc":
+            sorted.sort((a, b) => (b.fat || 0) - (a.fat || 0));
+            break;
+    }
+
+    return sorted;
+}
+
+function switchFoodView(view) {
+    currentFoodView = view;
+
+    // Update button states
+    document.querySelectorAll(".view-btn").forEach(btn => {
+        if (btn.dataset.view === view) {
+            btn.classList.add("active");
+        } else {
+            btn.classList.remove("active");
+        }
+    });
+
+    // Show/hide views
+    const tableContainer = document.getElementById("food-table-container");
+    const cardsList = document.getElementById("food-instances-list");
+
+    if (view === "table") {
+        tableContainer.style.display = "block";
+        cardsList.style.display = "none";
+    } else {
+        tableContainer.style.display = "none";
+        cardsList.style.display = "block";
+    }
+
+    // Re-render with current filtered data
+    displayFoodInstances(filteredFoodDatabase);
 }
