@@ -312,18 +312,7 @@ async function initializeFoodDatabase() {
     }
 
     try {
-        // Try to load from localStorage first
-        const saved = localStorage.getItem("foodDatabase");
-        if (saved) {
-            localFoodDatabase = JSON.parse(saved);
-            dbInitialized = true;
-            console.log(`📚 Loaded database from localStorage: ${localFoodDatabase.length} foods`);
-            console.log("📋 Available foods:", localFoodDatabase);
-            return;
-        }
-
-        // Only fetch from server if database doesn't exist locally
-        console.log("📡 Fetching initial food database from server...");
+        console.log("📡 Fetching food database from server...");
         const response = await fetch("/api/foods/recent", {
             headers: { "Authorization": `Bearer ${sessionId}` },
         });
@@ -337,10 +326,8 @@ async function initializeFoodDatabase() {
         localFoodDatabase = data.foods || [];
         dbInitialized = true;
 
-        // Save to localStorage for future sessions
-        localStorage.setItem("foodDatabase", JSON.stringify(localFoodDatabase));
-
-        console.log(`✅ Initialized local database with ${localFoodDatabase.length} foods`);
+        const cacheStatus = data.cached ? "📦 (cached)" : "🔄 (fetched)";
+        console.log(`✅ Initialized database with ${localFoodDatabase.length} foods ${cacheStatus}`);
         console.log("📋 Available foods:", localFoodDatabase);
     } catch (err) {
         console.error("❌ Error initializing food database:", err);

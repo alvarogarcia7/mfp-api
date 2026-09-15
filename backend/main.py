@@ -1,9 +1,11 @@
 """FastAPI server for MyFitnessPal web app."""
 
 import asyncio
+import json
 import logging
 import uuid
 from datetime import date
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import FastAPI, HTTPException, Header, Depends, Body
@@ -23,6 +25,9 @@ app = FastAPI()
 
 # In-memory session storage: session_id -> CurlCffiClient
 _sessions: dict[str, mfp_client.CurlCffiClient] = {}
+
+# Food database file path
+FOOD_DB_FILE = Path(__file__).parent / ".food_cache.json"
 
 
 def get_session_id(authorization: Annotated[str | None, Header()] = None) -> str:
@@ -283,12 +288,42 @@ def _safe_float(value) -> float:
         return 0.0
 
 
+def _load_food_cache() -> list[dict] | None:
+    """Load cached food database from JSON file."""
+    if not FOOD_DB_FILE.exists():
+        return None
+    try:
+        with open(FOOD_DB_FILE, 'r') as f:
+            return json.load(f)
+    except Exception as e:
+        logger.warning(f"Error loading food cache: {e}")
+        return None
+
+
+def _save_food_cache(foods: list[dict]) -> None:
+    """Save food database to JSON file."""
+    try:
+        with open(FOOD_DB_FILE, 'w') as f:
+            json.dump(foods, f, indent=2)
+        logger.info(f"Saved {len(foods)} foods to cache file")
+    except Exception as e:
+        logger.error(f"Error saving food cache: {e}")
+
+
 @app.get("/api/foods/recent")
 async def get_recent_foods(session_id: str = Depends(get_session_id)):
-    """Get foods from diary entries in the last 7 days, normalized to grams/ml.
+    """Get cached food database, or fetch from MFP if not cached.
 
-    Returns a list of unique foods with standardized measurements.
+    Fetches from diary entries in the last 7 days and caches to JSON file.
+    Returns a list of unique foods with standardized measurements (grams/ml).
     """
+    # Try to load from cache first
+    cached_foods = _load_food_cache()
+    if cached_foods is not None:
+        logger.info(f"Returning cached food database: {len(cached_foods)} foods")
+        return {"foods": cached_foods, "cached": True}
+
+    # Only fetch from MFP if cache doesn't exist
     client = get_client(session_id)
     from datetime import timedelta
 
@@ -328,7 +363,11 @@ async def get_recent_foods(session_id: str = Depends(get_session_id)):
     try:
         foods = await asyncio.to_thread(fetch_foods)
         logger.info(f"Fetched {len(foods)} unique foods from last 7 days")
-        return {"foods": foods}
+
+        # Save to cache for future use
+        _save_food_cache(foods)
+
+        return {"foods": foods, "cached": False}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching recent foods: {e}")
 
