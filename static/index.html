@@ -92,14 +92,21 @@
                         </select>
                     </div>
                     <div class="input-row">
-                        <input type="text" id="food-input" placeholder='e.g. "lettuce 85" or "chicken breast 150g"'>
+                        <textarea id="food-input" placeholder='Enter foods one per line:&#10;lettuce 85&#10;tomato 100&#10;chicken breast 150g' rows="4"></textarea>
                         <button id="search-btn">Search</button>
                     </div>
                 </div>
 
                 <!-- Search Results -->
                 <div id="search-results" class="search-results" style="display: none;">
-                    <h3>Select a food:</h3>
+                    <div class="results-header">
+                        <h3>Food Matches:</h3>
+                        <div class="results-actions">
+                            <button id="select-all-btn" class="action-btn">Select All</button>
+                            <button id="deselect-all-btn" class="action-btn">Deselect All</button>
+                            <button id="add-all-btn" class="action-btn primary">Add All to Diary</button>
+                        </div>
+                    </div>
                     <div id="results-list"></div>
                 </div>
 

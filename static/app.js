@@ -21,7 +21,13 @@ const foodInput = document.getElementById("food-input");
 const searchBtn = document.getElementById("search-btn");
 const searchResults = document.getElementById("search-results");
 const resultsList = document.getElementById("results-list");
+const selectAllBtn = document.getElementById("select-all-btn");
+const deselectAllBtn = document.getElementById("deselect-all-btn");
+const addAllBtn = document.getElementById("add-all-btn");
 const refreshBtn = document.getElementById("refresh-btn");
+
+// Store current food items being processed
+let currentFoodItems = [];
 
 // Initialize
 document.addEventListener("DOMContentLoaded", () => {
@@ -42,8 +48,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     searchBtn.addEventListener("click", handleSearch);
     foodInput.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") handleSearch();
+        if (e.key === "Enter" && e.ctrlKey) handleSearch();
     });
+    selectAllBtn.addEventListener("click", selectAllResults);
+    deselectAllBtn.addEventListener("click", deselectAllResults);
+    addAllBtn.addEventListener("click", addAllSelected);
     refreshBtn.addEventListener("click", loadToday);
 
     // Tab switching
@@ -249,72 +258,173 @@ function updateDashboard(data) {
 }
 
 async function handleSearch() {
-    const query = foodInput.value.trim();
-    if (!query || !sessionId) return;
+    const text = foodInput.value.trim();
+    if (!text || !sessionId) return;
 
-    const parsed = parseInput(query);
+    // Parse multiline input
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+    if (lines.length === 0) return;
 
     try {
-        const response = await fetch("/api/search", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${sessionId}`,
-            },
-            body: JSON.stringify({ query: parsed.name }),
-        });
+        // Search for all food items
+        currentFoodItems = [];
 
-        if (!response.ok) throw new Error("Search failed");
+        for (const line of lines) {
+            const parsed = parseInput(line);
+            console.log(`Searching for: ${parsed.name} (${parsed.quantity}${parsed.unit})`);
 
-        const data = await response.json();
-        showResults(data.results || [], parsed.quantity);
+            const response = await fetch("/api/search", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${sessionId}`,
+                },
+                body: JSON.stringify({ query: parsed.name }),
+            });
+
+            if (!response.ok) throw new Error("Search failed");
+
+            const data = await response.json();
+            const results = data.results || [];
+
+            if (results.length > 0) {
+                // Store with metadata
+                currentFoodItems.push({
+                    query: line,
+                    parsed: parsed,
+                    results: results,
+                    selected: results[0], // Pre-select first (most likely)
+                });
+            }
+        }
+
+        if (currentFoodItems.length > 0) {
+            showResults();
+        } else {
+            alert("No foods found");
+        }
     } catch (err) {
         alert(`Search error: ${err.message}`);
     }
 }
 
-function showResults(results, defaultQuantity) {
+function showResults() {
     resultsList.innerHTML = "";
 
-    results.forEach((food) => {
-        const div = document.createElement("div");
-        div.className = "result-item";
+    currentFoodItems.forEach((item, itemIdx) => {
+        const itemDiv = document.createElement("div");
+        itemDiv.style.marginBottom = "20px";
+        itemDiv.style.paddingBottom = "20px";
+        itemDiv.style.borderBottom = "1px solid #eee";
 
-        const calories = Math.round(food.calories || 0);
-        const protein = food.protein ? Math.round(food.protein) : "?";
-        const carbs = food.carbs ? Math.round(food.carbs) : "?";
-        const fat = food.fat ? Math.round(food.fat) : "?";
+        // Query header
+        const header = document.createElement("div");
+        header.style.fontWeight = "600";
+        header.style.marginBottom = "10px";
+        header.style.color = "#333";
+        header.textContent = `${item.query} → ${item.parsed.quantity}${item.parsed.unit}`;
+        itemDiv.appendChild(header);
 
-        div.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <div class="result-name">${escapeHtml(food.name)}</div>
-                    <div class="result-meta">
-                        <span>${calories} cal</span>
-                        <span>P: ${protein}g</span>
-                        <span>C: ${carbs}g</span>
-                        <span>F: ${fat}g</span>
-                    </div>
+        // Results for this query
+        const resultsDiv = document.createElement("div");
+        resultsDiv.style.display = "flex";
+        resultsDiv.style.flexDirection = "column";
+        resultsDiv.style.gap = "8px";
+
+        item.results.forEach((food, foodIdx) => {
+            const div = document.createElement("div");
+            div.className = "result-item";
+
+            // Pre-select the first (most likely) result
+            if (foodIdx === 0) {
+                div.classList.add("pre-selected");
+            }
+
+            const calories = Math.round(food.calories || 0);
+            const protein = food.protein ? Math.round(food.protein) : "?";
+            const carbs = food.carbs ? Math.round(food.carbs) : "?";
+            const fat = food.fat ? Math.round(food.fat) : "?";
+
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            checkbox.checked = (foodIdx === 0); // Pre-select first
+            checkbox.dataset.itemIdx = itemIdx;
+            checkbox.dataset.foodIdx = foodIdx;
+            checkbox.addEventListener("change", (e) => {
+                if (e.target.checked) {
+                    item.selected = food;
+                    // Uncheck other options for this item
+                    resultsList.querySelectorAll(`input[data-itemIdx="${itemIdx}"]`).forEach(cb => {
+                        if (cb !== checkbox) cb.checked = false;
+                    });
+                }
+            });
+
+            const content = document.createElement("div");
+            content.className = "result-content";
+            content.innerHTML = `
+                <div class="result-name">${escapeHtml(food.name)}</div>
+                <div class="result-meta">
+                    <span>${calories} cal</span>
+                    <span>P: ${protein}g</span>
+                    <span>C: ${carbs}g</span>
+                    <span>F: ${fat}g</span>
                 </div>
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <input type="number" class="quantity-input" value="${defaultQuantity}" min="0.1" step="0.1">
-                    <button style="background: #667eea; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">Add</button>
-                </div>
-            </div>
-        `;
+            `;
 
-        const button = div.querySelector("button");
-        const quantityInput = div.querySelector(".quantity-input");
-        button.addEventListener("click", async () => {
-            const quantity = parseFloat(quantityInput.value) || 1;
-            await logFood(food.food_id, food.weight_id, quantity);
-            loadToday();
+            div.appendChild(checkbox);
+            div.appendChild(content);
+            resultsDiv.appendChild(div);
         });
 
-        resultsList.appendChild(div);
+        itemDiv.appendChild(resultsDiv);
+        resultsList.appendChild(itemDiv);
     });
 
     searchResults.style.display = "block";
+}
+
+function selectAllResults() {
+    resultsList.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.checked = true;
+        cb.dispatchEvent(new Event('change'));
+    });
+}
+
+function deselectAllResults() {
+    resultsList.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.checked = false;
+    });
+}
+
+async function addAllSelected() {
+    if (!sessionId) return;
+
+    const toAdd = currentFoodItems.filter(item => item.selected);
+    if (toAdd.length === 0) {
+        alert("Please select at least one food");
+        return;
+    }
+
+    try {
+        addAllBtn.disabled = true;
+        addAllBtn.textContent = "Adding...";
+
+        for (const item of toAdd) {
+            const food = item.selected;
+            await logFood(food.food_id, food.weight_id, item.parsed.quantity);
+        }
+
+        foodInput.value = "";
+        searchResults.style.display = "none";
+        currentFoodItems = [];
+        await loadToday();
+    } catch (err) {
+        alert(`Error adding foods: ${err.message}`);
+    } finally {
+        addAllBtn.disabled = false;
+        addAllBtn.textContent = "Add All to Diary";
+    }
 }
 
 async function logFood(foodId, weightId, quantity) {
