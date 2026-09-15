@@ -2,21 +2,24 @@
 """CLI script to download raw Polar Flow calendar events data.
 
 Downloads calendar events for a date range and saves raw JSON to disk.
-Useful for building and updating the exercise database.
+Credentials are loaded from .env.local (POLAR_FLOW_COOKIE).
 
 Usage:
-    python cli_fetch_polar_data.py --cookie <token> --today
-    python cli_fetch_polar_data.py --cookie <token> --last-two-weeks
-    python cli_fetch_polar_data.py --cookie <token> --last-month
-    python cli_fetch_polar_data.py --cookie <token> --range-start 2026-09-01 --range-end 2026-09-15
+    python cli_fetch_polar_data.py --today
+    python cli_fetch_polar_data.py --last-two-weeks
+    python cli_fetch_polar_data.py --last-month
+    python cli_fetch_polar_data.py --range-start 2026-09-01 --range-end 2026-09-15
+    python cli_fetch_polar_data.py --cookie <token> --today  # Override .env.local
 """
 
 import argparse
 import json
 import logging
+import os
 import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
+from dotenv import load_dotenv
 from curl_cffi import requests as curl_cffi_requests
 
 # Configure logging
@@ -149,15 +152,19 @@ def fetch_and_save_polar_data(session, start_date: date, end_date: date) -> str:
 
 
 def main():
+    # Load environment variables from .env.local
+    env_path = Path(__file__).parent.parent / ".env.local"
+    load_dotenv(env_path)
+
     parser = argparse.ArgumentParser(
-        description="Download raw calendar events data from Polar Flow and save to disk"
+        description="Download raw calendar events data from Polar Flow and save to disk",
+        epilog="Credentials are loaded from .env.local. Use --cookie to override."
     )
 
-    # Authentication
+    # Authentication (optional if .env.local is set)
     parser.add_argument(
         "--cookie",
-        required=True,
-        help="Polar Flow session cookie (full cookie string with all cookies)"
+        help="Polar Flow session cookie (overrides .env.local POLAR_FLOW_COOKIE)"
     )
 
     # Date range
@@ -189,13 +196,27 @@ def main():
 
     args = parser.parse_args()
 
+    # Get cookie from args or environment
+    cookie = args.cookie or os.getenv("POLAR_FLOW_COOKIE")
+
+    if not cookie:
+        logger.error("❌ Polar Flow session cookie not found")
+        logger.error("   Set POLAR_FLOW_COOKIE in .env.local or use --cookie argument")
+        logger.error("")
+        logger.error("   To get your cookie:")
+        logger.error("   1. Log in to https://flow.polar.com/")
+        logger.error("   2. Open DevTools (F12) → Network tab")
+        logger.error("   3. Make a request (e.g., navigate to Training/Diary)")
+        logger.error("   4. Copy the full 'Cookie' header value")
+        sys.exit(1)
+
     # Create session with authentication
     try:
         logger.info("Setting up Polar Flow session")
         session = curl_cffi_requests.Session(impersonate="chrome")
 
         # Set cookies
-        session.headers["Cookie"] = args.cookie
+        session.headers["Cookie"] = cookie
 
         # Set required headers
         session.headers.update({
