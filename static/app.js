@@ -36,6 +36,17 @@ let entryDebugInfo = {};
 let localFoodDatabase = [];
 let dbInitialized = false;
 
+// Modal elements
+const loadMoreFoodsBtn = document.getElementById("load-more-foods-btn");
+const loadFoodsModal = document.getElementById("load-foods-modal");
+const closeModalBtn = document.getElementById("close-modal-btn");
+const startDateInput = document.getElementById("foods-start-date");
+const endDateInput = document.getElementById("foods-end-date");
+const quick1WeekBtn = document.getElementById("quick-1-week");
+const quick1MonthBtn = document.getElementById("quick-1-month");
+const loadFoodsConfirmBtn = document.getElementById("load-foods-confirm");
+const loadFoodsStatus = document.getElementById("load-foods-status");
+
 // Initialize
 document.addEventListener("DOMContentLoaded", () => {
     sessionId = localStorage.getItem("sessionId");
@@ -62,6 +73,16 @@ document.addEventListener("DOMContentLoaded", () => {
     deselectAllBtn.addEventListener("click", deselectAllResults);
     addAllBtn.addEventListener("click", addAllSelected);
     refreshBtn.addEventListener("click", loadToday);
+
+    // Modal listeners
+    loadMoreFoodsBtn.addEventListener("click", openLoadFoodsModal);
+    closeModalBtn.addEventListener("click", closeLoadFoodsModal);
+    loadFoodsModal.addEventListener("click", (e) => {
+        if (e.target === loadFoodsModal) closeLoadFoodsModal();
+    });
+    quick1WeekBtn.addEventListener("click", setQuick1Week);
+    quick1MonthBtn.addEventListener("click", setQuick1Month);
+    loadFoodsConfirmBtn.addEventListener("click", loadFoodsFromRange);
 
     // Tab switching
     tabBtns.forEach(btn => {
@@ -343,6 +364,89 @@ function searchLocalFoods(query) {
     return localFoodDatabase.filter(food =>
         food.name.toLowerCase().includes(queryLower)
     ).slice(0, 5);  // Return top 5 matches
+}
+
+function openLoadFoodsModal() {
+    loadFoodsModal.style.display = "flex";
+    const today = new Date();
+    endDateInput.valueAsDate = today;
+    loadFoodsStatus.textContent = "";
+}
+
+function closeLoadFoodsModal() {
+    loadFoodsModal.style.display = "none";
+    startDateInput.value = "";
+    endDateInput.value = "";
+    loadFoodsStatus.textContent = "";
+}
+
+function setQuick1Week() {
+    const end = new Date(endDateInput.valueAsDate || new Date());
+    const start = new Date(end);
+    start.setDate(start.getDate() - 7);
+
+    startDateInput.valueAsDate = start;
+    quick1WeekBtn.classList.add("active");
+    quick1MonthBtn.classList.remove("active");
+}
+
+function setQuick1Month() {
+    const end = new Date(endDateInput.valueAsDate || new Date());
+    const start = new Date(end);
+    start.setMonth(start.getMonth() - 1);
+
+    startDateInput.valueAsDate = start;
+    quick1WeekBtn.classList.remove("active");
+    quick1MonthBtn.classList.add("active");
+}
+
+async function loadFoodsFromRange() {
+    if (!sessionId || !startDateInput.value || !endDateInput.value) {
+        alert("Please select both start and end dates");
+        return;
+    }
+
+    try {
+        loadFoodsConfirmBtn.disabled = true;
+        loadFoodsStatus.textContent = "Loading foods...";
+
+        const startDate = startDateInput.value;
+        const endDate = endDateInput.value;
+
+        console.log(`\n📥 LOADING FOODS FROM RANGE: ${startDate} to ${endDate}`);
+
+        const response = await fetch(`/api/foods/range?start_date=${startDate}&end_date=${endDate}`, {
+            headers: { "Authorization": `Bearer ${sessionId}` },
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to load foods: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const newFoods = data.foods || [];
+
+        console.log(`✅ Loaded ${newFoods.length} foods from range`);
+
+        // Merge with existing database (avoid duplicates)
+        const existingNames = new Set(localFoodDatabase.map(f => f.name));
+        const uniqueNewFoods = newFoods.filter(f => !existingNames.has(f.name));
+
+        localFoodDatabase = [...localFoodDatabase, ...uniqueNewFoods];
+
+        console.log(`📚 Database now has ${localFoodDatabase.length} total foods`);
+
+        loadFoodsStatus.textContent = `✅ Added ${uniqueNewFoods.length} new foods. Database now has ${localFoodDatabase.length} foods.`;
+
+        setTimeout(() => {
+            closeLoadFoodsModal();
+        }, 2000);
+    } catch (err) {
+        console.error("❌ Error loading foods:", err);
+        loadFoodsStatus.textContent = `❌ Error: ${err.message}`;
+    } finally {
+        loadFoodsConfirmBtn.disabled = false;
+    }
 }
 
 async function handleSearch() {

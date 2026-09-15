@@ -134,6 +134,38 @@
                 </div>
 
                 <button id="refresh-btn" class="refresh-btn">Refresh</button>
+                <button id="load-more-foods-btn" class="action-btn" style="width: 100%; margin-top: 10px;">Load More Foods</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load More Foods Modal -->
+    <div id="load-foods-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Load Foods from Date Range</h2>
+                <button id="close-modal-btn" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-section">
+                    <label for="foods-start-date">Start Date:</label>
+                    <input type="date" id="foods-start-date">
+                </div>
+                <div class="modal-section">
+                    <label for="foods-end-date">End Date:</label>
+                    <input type="date" id="foods-end-date">
+                </div>
+                <div class="modal-section">
+                    <label>Quick Options:</label>
+                    <div class="quick-buttons">
+                        <button id="quick-1-week" class="quick-btn">1 Week Before End Date</button>
+                        <button id="quick-1-month" class="quick-btn">1 Month Before End Date</button>
+                    </div>
+                </div>
+                <div class="modal-section">
+                    <button id="load-foods-confirm" class="action-btn primary" style="width: 100%;">Load Foods</button>
+                </div>
+                <div id="load-foods-status" style="margin-top: 10px; text-align: center; font-size: 12px; color: #999;"></div>
             </div>
         </div>
     </div>

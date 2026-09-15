@@ -310,6 +310,44 @@ def _save_food_cache(foods: list[dict]) -> None:
         logger.error(f"Error saving food cache: {e}")
 
 
+def _fetch_foods_for_range(client, start_date: date, end_date: date) -> list[dict]:
+    """Fetch unique foods from diary entries in a date range."""
+    from datetime import timedelta
+
+    foods_map = {}  # Use dict to deduplicate by food name
+
+    # Fetch diary entries for the date range
+    current = end_date
+    while current >= start_date:
+        try:
+            mfp_day = client.get_date(current)
+
+            for meal in mfp_day.meals:
+                for entry in meal.entries:
+                    name = entry.name
+                    calories = _safe_float(entry.totals.get("calories"))
+                    protein = _safe_float(entry.totals.get("protein"))
+                    carbs = _safe_float(entry.totals.get("carbohydrates"))
+                    fat = _safe_float(entry.totals.get("fat"))
+
+                    # Skip if already have this food (take first occurrence)
+                    if name not in foods_map:
+                        foods_map[name] = {
+                            "name": name,
+                            "calories": calories,
+                            "protein": protein,
+                            "carbs": carbs,
+                            "fat": fat,
+                            "unit": "g",  # All foods stored in grams
+                        }
+        except Exception as e:
+            logger.warning(f"Error fetching diary for {current}: {e}")
+
+        current -= timedelta(days=1)
+
+    return list(foods_map.values())
+
+
 @app.get("/api/foods/recent")
 async def get_recent_foods(session_id: str = Depends(get_session_id)):
     """Get cached food database, or fetch from MFP if not cached.
@@ -327,41 +365,10 @@ async def get_recent_foods(session_id: str = Depends(get_session_id)):
     client = get_client(session_id)
     from datetime import timedelta
 
-    def fetch_foods():
-        foods_map = {}  # Use dict to deduplicate by food name
-
-        # Fetch last 7 days of diary entries
-        for i in range(7):
-            day = date.today() - timedelta(days=i)
-            try:
-                mfp_day = client.get_date(day)
-
-                for meal in mfp_day.meals:
-                    for entry in meal.entries:
-                        name = entry.name
-                        calories = _safe_float(entry.totals.get("calories"))
-                        protein = _safe_float(entry.totals.get("protein"))
-                        carbs = _safe_float(entry.totals.get("carbohydrates"))
-                        fat = _safe_float(entry.totals.get("fat"))
-
-                        # Skip if already have this food (take first occurrence)
-                        if name not in foods_map:
-                            foods_map[name] = {
-                                "name": name,
-                                "calories": calories,
-                                "protein": protein,
-                                "carbs": carbs,
-                                "fat": fat,
-                                "unit": "g",  # All foods stored in grams
-                            }
-            except Exception as e:
-                logger.warning(f"Error fetching diary for {day}: {e}")
-                continue
-
-        return list(foods_map.values())
-
     try:
-        foods = await asyncio.to_thread(fetch_foods)
+        end_date = date.today()
+        start_date = end_date - timedelta(days=7)
+        foods = await asyncio.to_thread(_fetch_foods_for_range, client, start_date, end_date)
         logger.info(f"Fetched {len(foods)} unique foods from last 7 days")
 
         # Save to cache for future use
@@ -370,6 +377,36 @@ async def get_recent_foods(session_id: str = Depends(get_session_id)):
         return {"foods": foods, "cached": False}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching recent foods: {e}")
+
+
+@app.get("/api/foods/range")
+async def get_foods_for_range(
+    start_date: str,
+    end_date: str,
+    session_id: str = Depends(get_session_id)
+):
+    """Fetch foods from a custom date range (format: YYYY-MM-DD).
+
+    Does not use or update the cache. Useful for loading additional foods.
+    """
+    client = get_client(session_id)
+
+    try:
+        start = date.fromisoformat(start_date)
+        end = date.fromisoformat(end_date)
+
+        if start > end:
+            raise HTTPException(status_code=400, detail="start_date must be before end_date")
+
+        logger.info(f"Fetching foods from {start} to {end}")
+        foods = await asyncio.to_thread(_fetch_foods_for_range, client, start, end)
+        logger.info(f"Fetched {len(foods)} foods for range {start} to {end}")
+
+        return {"foods": foods, "date_range": {"start": start_date, "end": end_date}}
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching foods: {e}")
 
 
 # Mount static files (frontend)
