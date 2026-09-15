@@ -163,19 +163,13 @@ async def get_today(session_id: str = Depends(get_session_id)):
     def fetch_data():
         mfp_day = client.get_date(date.today())
 
-        # Parse meals with nutrition data
+        # Parse meals with comprehensive nutrition data
         meals = {}
         for meal in mfp_day.meals:
             meal_name = meal.name.lower()
             meals[meal_name] = []
             for entry in meal.entries:
-                meals[meal_name].append({
-                    "name": entry.name,
-                    "calories": _safe_float(entry.totals.get("calories")),
-                    "protein": _safe_float(entry.totals.get("protein")),
-                    "carbs": _safe_float(entry.totals.get("carbohydrates")),
-                    "fat": _safe_float(entry.totals.get("fat")),
-                })
+                meals[meal_name].append(_extract_entry_data(entry))
 
         # Get exercise calories
         exercise_calories = 0.0
@@ -410,6 +404,41 @@ def _save_credentials(username: str, password: str | None = None, cookie: str | 
         logger.warning("⚠️  WARNING: Credentials stored in plaintext. This is only for development/testing!")
     except Exception as e:
         logger.error(f"Error saving credentials: {e}")
+
+
+def _extract_entry_data(entry) -> dict:
+    """Extract all available information from a food entry."""
+    totals = entry.totals if hasattr(entry, 'totals') else {}
+
+    entry_data = {
+        "name": entry.name,
+        "calories": _safe_float(totals.get("calories")),
+        "protein": _safe_float(totals.get("protein")),
+        "carbs": _safe_float(totals.get("carbohydrates")),
+        "fat": _safe_float(totals.get("fat")),
+        "fiber": _safe_float(totals.get("fiber")),
+        "sugar": _safe_float(totals.get("sugar")),
+        "sodium": _safe_float(totals.get("sodium")),
+        "cholesterol": _safe_float(totals.get("cholesterol")),
+        "saturated_fat": _safe_float(totals.get("saturated_fat")),
+        "potassium": _safe_float(totals.get("potassium")),
+    }
+
+    # Add entry ID if available
+    if hasattr(entry, 'id'):
+        entry_data["entry_id"] = entry.id
+    elif hasattr(entry, 'identifier'):
+        entry_data["entry_id"] = entry.identifier
+
+    # Add serving size info if available
+    if hasattr(entry, 'serving_size'):
+        entry_data["serving_size"] = entry.serving_size
+    if hasattr(entry, 'serving_unit'):
+        entry_data["serving_unit"] = entry.serving_unit
+    if hasattr(entry, 'quantity'):
+        entry_data["quantity"] = _safe_float(entry.quantity)
+
+    return entry_data
 
 
 def _fetch_foods_for_range(client, start_date: date, end_date: date) -> list[dict]:
