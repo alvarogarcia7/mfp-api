@@ -264,10 +264,16 @@ function updateDashboard(data) {
         } else {
             entries.forEach((entry, idx) => {
                 const li = document.createElement("li");
+                const calories = Math.round(entry.calories || 0);
+                const isExcessive = calories > goal;
+                const liClass = isExcessive ? 'class="excessive-entry"' : '';
                 li.innerHTML = `
                     <span class="entry-name">${escapeHtml(entry.name)}</span>
-                    <span class="entry-calories">${Math.round(entry.calories || 0)} cal</span>
+                    <span class="entry-calories">${calories} cal</span>
                 `;
+                if (isExcessive) {
+                    li.classList.add("excessive-entry");
+                }
                 entryList.appendChild(li);
             });
         }

@@ -505,6 +505,17 @@ body {
     text-align: right;
 }
 
+.excessive-entry {
+    background: #ffebee;
+    border-left: 3px solid #e74c3c;
+    padding-left: 10px;
+    margin-left: -13px;
+}
+
+.excessive-entry .entry-calories {
+    color: #e74c3c;
+}
+
 .delete-btn {
     background: #e74c3c;
     color: white;
