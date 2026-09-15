@@ -114,21 +114,33 @@ def login_mfp_cookie(cookie_input: str) -> tuple[dict[str, str], str]:
             logger.warning("Session token not found in parsed cookies")
             raise ValueError("Invalid cookie: missing session token")
 
-        # Validate the cookie by testing it
+        # Validate the cookie by trying to use it
         session = cffi_requests.Session(impersonate="chrome")
         session.cookies.update(cookies)
         logger.debug("Set up session with provided cookies")
 
-        # Try to fetch user profile to validate cookie
-        logger.debug("Validating cookie by fetching user profile")
-        resp = session.get("https://www.myfitnesspal.com/api/v2/user")
+        # Try to fetch home page which redirects to /profile/{username}
+        logger.debug("Validating cookie by fetching home page")
+        resp = session.get("https://www.myfitnesspal.com/", allow_redirects=True)
         resp.raise_for_status()
 
-        user_data = resp.json()
-        username = user_data.get("username") or user_data.get("email") or "unknown"
-        logger.info(f"Cookie validated, logged in as: {username}")
+        # Extract username from the redirect URL (should end up at /profile/{username})
+        final_url = resp.url
+        logger.debug(f"Final URL after redirect: {final_url}")
 
-        return cookies, username
+        # Try to extract username from profile URL
+        if "/profile/" in str(final_url):
+            username = str(final_url).split("/profile/")[-1].split("?")[0].split("#")[0]
+            if username:
+                logger.info(f"Cookie validated, logged in as: {username}")
+                return cookies, username
+
+        # Fallback: try to get username from page content or use "user"
+        if "profile" in resp.text.lower():
+            logger.info("Cookie validated, session appears valid")
+            return cookies, "user"
+
+        raise ValueError("Could not validate cookie - session may be expired")
 
     except ValueError as e:
         logger.warning(f"Cookie validation failed: {str(e)}")
