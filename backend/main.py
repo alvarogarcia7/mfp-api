@@ -828,22 +828,30 @@ async def get_polar_flow_status():
 
     polar_username = os.getenv("POLAR_FLOW_USERNAME")
     polar_cookie = os.getenv("POLAR_FLOW_COOKIE")
+    polar_user_id = os.getenv("POLAR_FLOW_USER_ID")
 
     if not polar_username or not polar_cookie:
         return {
             "connected": False,
             "configured": False,
-            "message": "Polar Flow credentials not found in .env.local"
+            "message": "Polar Flow credentials not found in .env.local (missing POLAR_FLOW_USERNAME or POLAR_FLOW_COOKIE)"
+        }
+
+    if not polar_user_id:
+        return {
+            "connected": False,
+            "configured": False,
+            "message": "Polar Flow user ID not found in .env.local (missing POLAR_FLOW_USER_ID)"
         }
 
     if _polar_flow_client is None:
         try:
-            _polar_flow_client = create_polar_client(polar_cookie, polar_username)
+            _polar_flow_client = create_polar_client(polar_cookie, polar_username, polar_user_id)
             if not _polar_flow_client.validate_connection():
                 return {
                     "connected": False,
                     "configured": True,
-                    "message": "Invalid Polar Flow credentials"
+                    "message": "Polar Flow authentication failed. Check your credentials and user ID in .env.local"
                 }
         except Exception as e:
             logger.error(f"Error connecting to Polar Flow: {e}")
@@ -876,15 +884,22 @@ async def get_polar_flow_activities(
     if _polar_flow_client is None:
         polar_username = os.getenv("POLAR_FLOW_USERNAME")
         polar_cookie = os.getenv("POLAR_FLOW_COOKIE")
+        polar_user_id = os.getenv("POLAR_FLOW_USER_ID")
 
         if not polar_username or not polar_cookie:
             raise HTTPException(
                 status_code=400,
-                detail="Polar Flow not configured. Add credentials to .env.local"
+                detail="Polar Flow not configured. Add POLAR_FLOW_USERNAME and POLAR_FLOW_COOKIE to .env.local"
+            )
+
+        if not polar_user_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Polar Flow user ID not configured. Add POLAR_FLOW_USER_ID to .env.local"
             )
 
         try:
-            _polar_flow_client = create_polar_client(polar_cookie, polar_username)
+            _polar_flow_client = create_polar_client(polar_cookie, polar_username, polar_user_id)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Polar Flow connection error: {e}")
 

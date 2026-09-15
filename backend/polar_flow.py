@@ -33,41 +33,52 @@ POLAR_FLOW_BASE = "https://flow.polar.com"
 class PolarFlowClient:
     """Client for interacting with Polar Flow API."""
 
-    def __init__(self, cookie: str, username: str):
+    def __init__(self, cookie: str, username: str, user_id: str = None):
         """Initialize Polar Flow client.
 
         Args:
-            cookie: Polar Flow session cookie
+            cookie: Polar Flow session cookie (full cookie string including FLOW_SESSION)
             username: Polar Flow username
+            user_id: Polar Flow user ID (required for API calls)
         """
         self.cookie = cookie
         self.username = username
+        self.user_id = user_id or self._extract_user_id()
         self.session = None
         self._setup_session()
+
+    def _extract_user_id(self) -> str:
+        """Try to extract user ID from cookie string (if present)."""
+        # User ID might be embedded in FLOW_SESSION cookie
+        # Format: FLOW_SESSION=userid_...
+        if "FLOW_SESSION" in self.cookie:
+            parts = self.cookie.split("FLOW_SESSION=")
+            if len(parts) > 1:
+                session_part = parts[1].split(";")[0].split("_")
+                if session_part:
+                    try:
+                        return session_part[0]
+                    except:
+                        pass
+        return None
 
     def _setup_session(self):
         """Set up HTTP session with authentication."""
         self.session = curl_cffi_requests.Session(impersonate="chrome")
 
-        # Parse cookie into session
-        if "=" in self.cookie:
-            # Cookie header format
-            self.session.cookies.set_cookie(
-                requests.cookies.create_cookie(
-                    domain=".polar.com",
-                    name="",  # Will be parsed from cookie
-                    value=self.cookie
-                )
-            )
-        else:
-            # Raw token format
-            self.session.cookies.set("polar_session", self.cookie)
+        # Set all cookies from the cookie string
+        if self.cookie:
+            self.session.headers["Cookie"] = self.cookie
 
-        # Set common headers
+        # Set required headers
         self.session.headers.update({
+            "accept": "application/json, text/javascript, */*; q=0.01",
+            "accept-language": "en-US,en;q=0.9",
+            "cache-control": "no-cache",
+            "content-type": "application/json",
+            "pragma": "no-cache",
+            "x-requested-with": "XMLHttpRequest",
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            "Accept": "application/json",
-            "Accept-Language": "en-US,en;q=0.9",
         })
 
     def get_activities(self, start_date: date, end_date: date, use_vcr: bool = True) -> list[dict]:
@@ -84,32 +95,44 @@ class PolarFlowClient:
         def _fetch():
             activities = []
             try:
-                # Polar Flow API endpoint for activities
-                url = f"{POLAR_FLOW_BASE}/api/user/{self.username}/activities"
-                params = {
-                    "start": start_date.isoformat(),
-                    "end": end_date.isoformat(),
+                if not self.user_id:
+                    raise Exception("User ID is required. Please provide user_id when initializing the client.")
+
+                # Polar Flow API endpoint for training history
+                url = f"{POLAR_FLOW_BASE}/api/training/history"
+
+                # Request body with userId and date range
+                payload = {
+                    "userId": self.user_id,
+                    "fromDate": start_date.isoformat(),
+                    "toDate": end_date.isoformat(),
                 }
 
                 logger.info(f"Fetching Polar Flow activities from {start_date} to {end_date}")
-                logger.debug(f"Request URL: {url}")
-                logger.debug(f"Request params: {params}")
-                logger.debug(f"Request headers: {self.session.headers}")
+                logger.info(f"Using endpoint: {url}")
+                logger.debug(f"Request payload: {payload}")
+                logger.debug(f"Request headers: {dict(self.session.headers)}")
 
-                response = self.session.get(url, params=params, timeout=30)
+                response = self.session.post(url, json=payload, timeout=30)
 
                 logger.debug(f"Response status: {response.status_code}")
                 logger.debug(f"Response URL: {response.url}")
 
+                if response.status_code == 401:
+                    logger.error(f"Polar Flow returned 401 Unauthorized")
+                    raise Exception(f"HTTP 401: Invalid Polar Flow credentials or expired session. Please update your cookie in .env.local.")
+
                 if response.status_code == 404:
                     logger.error(f"Polar Flow API returned 404. URL: {response.url}")
-                    logger.error(f"This may indicate: invalid username, wrong API endpoint, or missing authentication")
-                    raise Exception(f"HTTP 404: Polar Flow API endpoint not found. Check username and credentials.")
+                    raise Exception(f"HTTP 404: Polar Flow API endpoint not found. Check user_id and API endpoint.")
 
                 response.raise_for_status()
 
-                data = response.json()
-                activities_list = data.get("activities", [])
+                # Response is a direct array of activities
+                activities_list = response.json()
+                if not isinstance(activities_list, list):
+                    logger.warning(f"Expected list response, got: {type(activities_list)}")
+                    activities_list = activities_list.get("activities", []) if isinstance(activities_list, dict) else []
 
                 logger.info(f"Fetched {len(activities_list)} activities from Polar Flow")
 
@@ -134,46 +157,59 @@ class PolarFlowClient:
             return _fetch()
 
     def _parse_activity(self, activity: dict) -> Optional[dict]:
-        """Parse raw activity data from Polar Flow.
+        """Parse raw activity data from Polar Flow training history.
 
         Args:
             activity: Raw activity dict from API
+                    Expected fields: sportName, duration (ms), calories, startDate, etc.
 
         Returns:
             Parsed activity dict or None if parsing failed
         """
         try:
-            # Extract activity fields
-            activity_type = activity.get("type", "Unknown")
-            start_time = activity.get("start_time", "")
-            duration_seconds = activity.get("duration", 0)  # In seconds
+            # Extract activity fields from Polar Flow format
+            sport_name = activity.get("sportName", "Unknown")
+            duration_ms = activity.get("duration", 0)  # In milliseconds
             calories = activity.get("calories", 0)
+            start_date = activity.get("startDate", "")  # Format: "2026-09-11 17:49:06.881"
+            distance = activity.get("distance")  # Optional
 
-            if not duration_seconds or not calories:
+            if not duration_ms or not calories:
                 logger.debug(f"Skipping activity: missing duration or calories")
                 return None
 
-            # Convert seconds to minutes
-            duration_minutes = int(duration_seconds / 60)
+            # Convert milliseconds to minutes
+            duration_minutes = int(duration_ms / 1000 / 60)
 
-            # Extract date from start_time
+            # Extract date from startDate (format: "2026-09-11 17:49:06.881")
             try:
-                activity_date = start_time.split("T")[0]
+                activity_date = start_date.split(" ")[0] if " " in start_date else date.today().isoformat()
             except (IndexError, AttributeError):
                 activity_date = date.today().isoformat()
 
-            return {
-                "name": f"Polar Flow - {activity_type}",
-                "type": activity_type,
+            # Create activity name with sport type
+            activity_name = f"Polar Flow - {sport_name}"
+
+            parsed = {
+                "name": activity_name,
+                "sport_name": sport_name,
                 "duration_minutes": duration_minutes,
                 "calories": int(calories),
                 "date": activity_date,
-                "start_time": start_time,
-                "raw_data": activity
+                "start_time": start_date,
+                "id": activity.get("id"),
             }
 
+            # Add optional fields
+            if distance is not None:
+                parsed["distance"] = distance
+            if activity.get("hrAvg"):
+                parsed["hr_avg"] = activity.get("hrAvg")
+
+            return parsed
+
         except Exception as e:
-            logger.error(f"Error parsing activity: {e}")
+            logger.error(f"Error parsing activity: {e}", exc_info=True)
             return None
 
     def validate_connection(self) -> bool:
@@ -183,14 +219,54 @@ class PolarFlowClient:
             True if connection is valid, False otherwise
         """
         try:
-            url = f"{POLAR_FLOW_BASE}/api/user/{self.username}"
-            response = self.session.get(url, timeout=10)
-            return response.status_code == 200
+            if not self.user_id:
+                logger.error("Cannot validate connection: user_id is not set")
+                return False
+
+            # Try a minimal request to validate authentication
+            url = f"{POLAR_FLOW_BASE}/api/training/history"
+            today = date.today()
+            payload = {
+                "userId": self.user_id,
+                "fromDate": today.isoformat(),
+                "toDate": today.isoformat(),
+            }
+
+            logger.debug(f"Validating Polar Flow connection to {url}")
+            response = self.session.post(url, json=payload, timeout=10)
+
+            logger.debug(f"Validation response status: {response.status_code}")
+
+            # Status 200 or 401 means endpoint exists (401 = auth issue, but endpoint is real)
+            # 404 means wrong endpoint or completely wrong setup
+            if response.status_code == 404:
+                logger.error(f"Polar Flow API endpoint not found (404)")
+                return False
+
+            if response.status_code in [200, 401]:
+                # 401 means auth failed but endpoint exists and is reachable
+                if response.status_code == 401:
+                    logger.warning("Polar Flow: authentication failed (401) - check credentials")
+                    return False
+                return True
+
+            logger.warning(f"Unexpected response status: {response.status_code}")
+            return False
+
         except Exception as e:
             logger.error(f"Polar Flow connection validation failed: {e}")
             return False
 
 
-def create_polar_client(cookie: str, username: str) -> PolarFlowClient:
-    """Create a Polar Flow client instance."""
-    return PolarFlowClient(cookie, username)
+def create_polar_client(cookie: str, username: str, user_id: str = None) -> PolarFlowClient:
+    """Create a Polar Flow client instance.
+
+    Args:
+        cookie: Polar Flow session cookie (full cookie string)
+        username: Polar Flow username
+        user_id: Polar Flow user ID (required for API calls)
+
+    Returns:
+        PolarFlowClient instance
+    """
+    return PolarFlowClient(cookie, username, user_id)
