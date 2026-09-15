@@ -37,12 +37,60 @@ RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
 POLAR_API_BASE = "https://flow.polar.com"
 
 
+def get_last_entry_date() -> date | None:
+    """Get the date of the last parsed exercise entry.
+
+    Reads from .exercise_cache.json to find the most recent entry date.
+
+    Returns:
+        Date of last entry or None if no entries found
+    """
+    exercise_cache = RAW_DATA_DIR.parent / ".exercise_cache.json"
+
+    if not exercise_cache.exists():
+        return None
+
+    try:
+        with open(exercise_cache, 'r') as f:
+            exercises = json.load(f)
+
+        if not exercises:
+            return None
+
+        # Find latest date from all exercises
+        latest_date = None
+        for exercise in exercises:
+            entry_date_str = exercise.get("date")
+            if entry_date_str:
+                try:
+                    entry_date = date.fromisoformat(entry_date_str)
+                    if latest_date is None or entry_date > latest_date:
+                        latest_date = entry_date
+                except ValueError:
+                    continue
+
+        return latest_date
+
+    except Exception as e:
+        logger.warning(f"Failed to read last entry date: {e}")
+        return None
+
+
 def parse_date_range(args) -> tuple[date, date]:
     """Parse date range from CLI arguments."""
     today = date.today()
 
     if args.today:
         return today, today
+    elif args.since_last_entry:
+        last_date = get_last_entry_date()
+        if last_date:
+            logger.info(f"Last entry found on {last_date}, fetching from {last_date} to today")
+            return last_date, today
+        else:
+            logger.warning("No previous entries found, fetching last 30 days instead")
+            start = today - timedelta(days=30)
+            return start, today
     elif args.last_two_weeks:
         start = today - timedelta(days=14)
         return start, today
@@ -61,7 +109,7 @@ def parse_date_range(args) -> tuple[date, date]:
             logger.error(f"Invalid date format: {e}. Use YYYY-MM-DD")
             sys.exit(1)
     else:
-        logger.error("Must specify one of: --today, --last-two-weeks, --last-month, or --range-start/--range-end")
+        logger.error("Must specify one of: --today, --since-last-entry, --last-two-weeks, --last-month, or --range-start/--range-end")
         sys.exit(1)
 
 
@@ -173,6 +221,11 @@ def main():
         "--today",
         action="store_true",
         help="Fetch only today's data"
+    )
+    range_group.add_argument(
+        "--since-last-entry",
+        action="store_true",
+        help="Fetch from last parsed entry date until today (incremental update)"
     )
     range_group.add_argument(
         "--last-two-weeks",
