@@ -33,6 +33,10 @@ FOOD_DB_FILE = Path(__file__).parent / ".food_cache.json"
 ENTRIES_DIR = Path(__file__).parent.parent / "data" / "food"
 ENTRIES_FILE = ENTRIES_DIR / "entries.json"
 
+# Credentials file path
+CREDENTIALS_DIR = Path(__file__).parent.parent / "data" / "user"
+CREDENTIALS_FILE = CREDENTIALS_DIR / "credentials.json"
+
 
 def get_session_id(authorization: Annotated[str | None, Header()] = None) -> str:
     """Extract session ID from Authorization header."""
@@ -131,6 +135,15 @@ async def login(request: dict = Body(...)):
 
     _sessions[session_id] = client
     logger.info(f"Session created: {session_id} for user: {mfp_username}")
+
+    # Save credentials to disk
+    try:
+        if cookie_input:
+            _save_credentials(mfp_username, password=None, cookie=cookie_input)
+        else:
+            _save_credentials(mfp_username, password=password, cookie=None)
+    except Exception as e:
+        logger.warning(f"Failed to save credentials: {e}")
 
     return {"session_id": session_id, "username": mfp_username}
 
@@ -359,6 +372,44 @@ def _save_entries(entries_data: dict) -> None:
         logger.info(f"Saved entries to {ENTRIES_FILE}")
     except Exception as e:
         logger.error(f"Error saving entries: {e}")
+
+
+def _load_credentials() -> dict:
+    """Load credentials from JSON file."""
+    if not CREDENTIALS_FILE.exists():
+        return {"last_login": None, "username": None, "password": None, "cookie": None}
+    try:
+        with open(CREDENTIALS_FILE, 'r') as f:
+            return json.load(f)
+    except Exception as e:
+        logger.warning(f"Error loading credentials: {e}")
+        return {"last_login": None, "username": None, "password": None, "cookie": None}
+
+
+def _save_credentials(username: str, password: str | None = None, cookie: str | None = None) -> None:
+    """Save credentials to JSON file.
+
+    WARNING: Storing passwords in plaintext is a security risk.
+    This should only be used for local development/testing.
+    """
+    try:
+        from datetime import datetime
+        CREDENTIALS_DIR.mkdir(parents=True, exist_ok=True)
+
+        credentials_data = {
+            "last_login": datetime.now().isoformat(),
+            "username": username,
+            "password": password,
+            "cookie": cookie,
+        }
+
+        with open(CREDENTIALS_FILE, 'w') as f:
+            json.dump(credentials_data, f, indent=2)
+
+        logger.info(f"Saved credentials for user: {username}")
+        logger.warning("⚠️  WARNING: Credentials stored in plaintext. This is only for development/testing!")
+    except Exception as e:
+        logger.error(f"Error saving credentials: {e}")
 
 
 def _fetch_foods_for_range(client, start_date: date, end_date: date) -> list[dict]:
