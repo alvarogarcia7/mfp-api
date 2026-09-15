@@ -432,9 +432,15 @@ async function addAllSelected() {
         addAllBtn.disabled = true;
         addAllBtn.textContent = "Adding...";
 
-        for (const item of toAdd) {
+        for (let i = 0; i < toAdd.length; i++) {
+            const item = toAdd[i];
             const food = item.selected;
             await logFood(food.food_id, food.weight_id, item.parsed.quantity);
+
+            if (i < toAdd.length - 1) {
+                const delayMs = (Math.random() * 20 + 5) * 1000;
+                await new Promise(resolve => setTimeout(resolve, delayMs));
+            }
         }
 
         foodInput.value = "";
