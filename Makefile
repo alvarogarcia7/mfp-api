@@ -1,24 +1,35 @@
-.PHONY: help install install-prod run run-prod test test-cov clean lint format dev-setup
+.PHONY: help install install-prod run run-prod test test-cov clean lint format dev-setup mfp-download mfp-parse polar-download polar-parse
 
 ## Show help for all targets
 help:
 	@echo "MyFitnessPal API - Available targets:"
 	@echo ""
+	@echo "Server:"
 	@echo "  make install      - Install all dependencies (dev + prod)"
 	@echo "  make install-prod - Install only production dependencies"
 	@echo "  make run          - Start development server (auto-reload, random port)"
 	@echo "  make run-prod     - Start production server (4 workers, random port)"
+	@echo ""
+	@echo "Testing & Code Quality:"
 	@echo "  make test         - Run test suite"
 	@echo "  make test-cov     - Run tests with coverage report"
 	@echo "  make lint         - Check Python syntax"
 	@echo "  make format       - Format code with black"
+	@echo ""
+	@echo "Data Management:"
+	@echo "  make mfp-download - Download MyFitnessPal data (today)"
+	@echo "  make mfp-parse    - Parse MyFitnessPal raw data into cache"
+	@echo "  make polar-download - Download Polar Flow data (since last entry)"
+	@echo "  make polar-parse  - Parse Polar Flow raw data into cache"
+	@echo ""
+	@echo "Maintenance:"
 	@echo "  make clean        - Remove build artifacts"
 	@echo "  make dev-setup    - Setup development environment"
 	@echo ""
 	@echo "Examples:"
 	@echo "  make install && make run"
-	@echo "  make test"
-	@echo "  make clean"
+	@echo "  make mfp-download && make mfp-parse"
+	@echo "  make polar-download && make polar-parse"
 
 ## Install all dependencies (dev + prod)
 install:
@@ -79,6 +90,26 @@ clean:
 	find . -type d -name "*.egg-info" -exec rm -rf {} + 2>/dev/null || true
 	rm -rf dist/ build/ htmlcov/ .coverage || true
 	@echo "✓ Cleaned"
+
+## Download MyFitnessPal data (today)
+mfp-download:
+	@echo "Downloading MyFitnessPal data..."
+	python cli.py mfp fetch --today
+
+## Parse MyFitnessPal raw data into cache
+mfp-parse:
+	@echo "Parsing MyFitnessPal data..."
+	python cli.py mfp parse --merge
+
+## Download Polar Flow data (incremental from last entry)
+polar-download:
+	@echo "Downloading Polar Flow data..."
+	python cli.py polar fetch --since-last-entry
+
+## Parse Polar Flow raw data into cache
+polar-parse:
+	@echo "Parsing Polar Flow data..."
+	python cli.py polar parse --merge
 
 ## Setup development environment (install deps)
 dev-setup: install
