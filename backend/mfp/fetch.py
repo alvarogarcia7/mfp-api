@@ -144,7 +144,7 @@ def _safe_float(value) -> float:
 
 
 def main():
-    env_path = Path(__file__).parent.parent / ".env.local"
+    env_path = Path(__file__).parent.parent.parent / ".env.local"
     load_dotenv(env_path)
 
     parser = argparse.ArgumentParser(

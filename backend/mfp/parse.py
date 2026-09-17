@@ -27,8 +27,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Paths
-BACKEND_DIR = Path(__file__).parent
-RAW_DATA_DIR = BACKEND_DIR.parent / "data" / "raw_food_data"
+BACKEND_DIR = Path(__file__).parent.parent
+RAW_DATA_DIR = BACKEND_DIR / "data" / "raw_food_data"
 FOOD_CACHE_FILE = BACKEND_DIR / ".food_cache.json"
 FOOD_SCHEMA_FILE = BACKEND_DIR / "food_schema.json"
 BACKUP_DIR = BACKEND_DIR / ".backups"

@@ -63,12 +63,12 @@ run-prod:
 ## Run the test suite
 test:
 	@echo "Running tests..."
-	pytest tests/ -v --tb=short || (echo "No tests found or test execution failed" && exit 1)
+	uv run pytest tests/ -v --tb=short || (echo "No tests found or test execution failed" && exit 1)
 
 ## Run tests with coverage report
 test-cov:
 	@echo "Running tests with coverage..."
-	pytest tests/ -v --cov=backend --cov-report=html
+	uv run pytest tests/ -v --cov=backend --cov-report=html
 
 ## Run mypy type checker
 typecheck:
@@ -108,10 +108,10 @@ mfp-download:
 	@. ./.env.local; \
 	if [ -n "$$MFP_SESSION_COOKIE" ]; then \
 		echo "Downloading MyFitnessPal data using session cookie..."; \
-		python cli.py mfp fetch --cookie "$$MFP_SESSION_COOKIE" --today; \
+		uv run python cli.py mfp fetch --cookie "$$MFP_SESSION_COOKIE" --today; \
 	elif [ -n "$$MFP_USERNAME" ] && [ -n "$$MFP_PASSWORD" ]; then \
 		echo "Downloading MyFitnessPal data using credentials..."; \
-		python cli.py mfp fetch --username "$$MFP_USERNAME" --password "$$MFP_PASSWORD" --today; \
+		uv run python cli.py mfp fetch --username "$$MFP_USERNAME" --password "$$MFP_PASSWORD" --today; \
 	else \
 		echo "Error: Missing MFP credentials in .env.local"; \
 		echo "Set either MFP_SESSION_COOKIE or both MFP_USERNAME and MFP_PASSWORD"; \
@@ -121,17 +121,17 @@ mfp-download:
 ## Parse MyFitnessPal raw data into cache
 mfp-parse:
 	@echo "Parsing MyFitnessPal data..."
-	python cli.py mfp parse --merge
+	uv run python cli.py mfp parse --merge
 
 ## Download Polar Flow data (incremental from last entry)
 polar-download:
 	@echo "Downloading Polar Flow data..."
-	python cli.py polar fetch --since-last-entry
+	uv run python cli.py polar fetch --since-last-entry
 
 ## Parse Polar Flow raw data into cache
 polar-parse:
 	@echo "Parsing Polar Flow data..."
-	python cli.py polar parse --merge
+	uv run python cli.py polar parse --merge
 
 ## Install pre-commit hooks
 pre-commit-install:
