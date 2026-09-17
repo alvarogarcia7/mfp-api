@@ -1,7 +1,7 @@
 import re
 import uuid
 from http.cookiejar import Cookie, CookieJar
-from typing import cast
+from typing import Literal, cast
 
 import myfitnesspal
 from curl_cffi import requests as cffi_requests
@@ -41,7 +41,7 @@ class CurlCffiClient(myfitnesspal.Client):
         self,
         cookiejar: CookieJar,
         username: str | None = None,
-        impersonate: str | None = None,
+        impersonate: Literal["chrome"] | None = None,
     ):
         self._username_override = username
         self._client_instance_id = uuid.uuid4()
@@ -49,7 +49,7 @@ class CurlCffiClient(myfitnesspal.Client):
         self._log_requests_to = None
         self.unit_aware = False
         self.session = cffi_requests.Session(
-            impersonate=cast(str, impersonate or "chrome")
+            impersonate=cast(Literal["chrome"], impersonate or "chrome")
         )
         self.session.cookies.update(cookiejar)
         self._auth_data = self._get_auth_data()
@@ -103,7 +103,7 @@ def cookies_to_jar(cookies: dict[str, str]) -> CookieJar:
 def build_client(
     cookies: dict[str, str],
     username: str | None = None,
-    impersonate: str | None = None,
+    impersonate: Literal["chrome"] | None = None,
 ) -> CurlCffiClient:
     return CurlCffiClient(
         cookies_to_jar(cookies), username=username, impersonate=impersonate
