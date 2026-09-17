@@ -15,9 +15,11 @@ Usage:
 import argparse
 import json
 import logging
+import os
 import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
+from dotenv import load_dotenv
 
 from ..mfp_auth import login_mfp_password, login_mfp_cookie
 from ..vendor import mfp_client
@@ -142,6 +144,9 @@ def _safe_float(value) -> float:
 
 
 def main():
+    env_path = Path(__file__).parent.parent / ".env.local"
+    load_dotenv(env_path)
+
     parser = argparse.ArgumentParser(
         description="Download raw food data from MyFitnessPal API and save to disk"
     )
@@ -204,8 +209,10 @@ def main():
             logger.info(f"✅ Authenticated as {mfp_username}")
         elif args.cookie:
             logger.info("Authenticating with session cookie")
-            # For cookie auth, we need the username too
-            username = input("Enter MFP username for cookie auth: ").strip()
+            # For cookie auth, we need the username - check .env.local first
+            username = os.getenv("MFP_USERNAME", "").strip()
+            if not username:
+                username = input("Enter MFP username for cookie auth: ").strip()
             if not username:
                 logger.error("Username is required for cookie authentication")
                 sys.exit(1)
