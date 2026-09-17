@@ -19,8 +19,8 @@ import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-from mfp_auth import login_mfp_password, login_mfp_cookie
-from vendor import mfp_client
+from ..mfp_auth import login_mfp_password, login_mfp_cookie
+from ..vendor import mfp_client
 
 # Configure logging
 logging.basicConfig(

@@ -19,8 +19,8 @@ from datetime import date
 from pathlib import Path
 from dotenv import load_dotenv
 
-from mfp_auth import login_mfp_password, login_mfp_cookie
-from vendor import mfp_client, diary
+from ..mfp_auth import login_mfp_password, login_mfp_cookie
+from ..vendor import mfp_client, diary
 
 # Configure logging
 logging.basicConfig(
