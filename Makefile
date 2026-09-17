@@ -1,4 +1,4 @@
-.PHONY: help install install-prod run run-prod test test-cov clean lint format dev-setup mfp-download mfp-parse polar-download polar-parse
+.PHONY: help install install-prod run run-prod test test-cov clean lint format dev-setup mfp-download mfp-parse polar-download polar-parse pre-commit-install
 
 ## Show help for all targets
 help:
@@ -23,8 +23,9 @@ help:
 	@echo "  make polar-parse  - Parse Polar Flow raw data into cache"
 	@echo ""
 	@echo "Maintenance:"
-	@echo "  make clean        - Remove build artifacts"
-	@echo "  make dev-setup    - Setup development environment"
+	@echo "  make clean              - Remove build artifacts"
+	@echo "  make pre-commit-install - Install pre-commit hooks"
+	@echo "  make dev-setup          - Setup development environment (includes pre-commit)"
 	@echo ""
 	@echo "Examples:"
 	@echo "  make install && make run"
@@ -111,8 +112,14 @@ polar-parse:
 	@echo "Parsing Polar Flow data..."
 	python cli.py polar parse --merge
 
+## Install pre-commit hooks
+pre-commit-install:
+	@echo "Installing pre-commit hooks..."
+	pre-commit install
+	@echo "✓ Pre-commit hooks installed"
+
 ## Setup development environment (install deps)
-dev-setup: install
+dev-setup: install pre-commit-install
 	@echo "Development environment ready!"
 	@echo "Run 'make run' to start the server"
 	@echo "Run 'make test' to run tests"

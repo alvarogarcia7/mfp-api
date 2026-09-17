@@ -1,0 +1,20 @@
+repos:
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy type checking
+        entry: mypy backend tests
+        language: system
+        types: [python]
+        pass_filenames: false
+        stages: [commit]
+        require_serial: true
+
+      - id: pytest
+        name: pytest
+        entry: pytest tests/ -v --tb=short
+        language: system
+        types: [python]
+        pass_filenames: false
+        stages: [commit]
+        require_serial: true
