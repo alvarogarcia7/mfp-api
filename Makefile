@@ -1,4 +1,4 @@
-.PHONY: help install install-prod run run-prod test test-cov clean lint format dev-setup mfp-download mfp-parse polar-download polar-parse pre-commit-install
+.PHONY: help install install-prod run run-prod test test-cov type-check clean lint format dev-setup mfp-download mfp-parse polar-download polar-parse pre-commit-install
 
 ## Show help for all targets
 help:
@@ -13,6 +13,7 @@ help:
 	@echo "Testing & Code Quality:"
 	@echo "  make test         - Run test suite"
 	@echo "  make test-cov     - Run tests with coverage report"
+	@echo "  make type-check   - Run mypy type checker"
 	@echo "  make lint         - Check Python syntax"
 	@echo "  make format       - Format code with black"
 	@echo ""
@@ -68,6 +69,11 @@ test:
 test-cov:
 	@echo "Running tests with coverage..."
 	pytest tests/ -v --cov=backend --cov-report=html
+
+## Run mypy type checker
+type-check:
+	@echo "Running mypy type checker..."
+	mypy backend tests
 
 ## Check Python syntax of source files
 lint:
