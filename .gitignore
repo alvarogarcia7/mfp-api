@@ -49,6 +49,7 @@ htmlcov/
 *.sqlite
 *.sqlite3
 session_*
+backend/data/
 
 # uv
 .uv/
