@@ -45,7 +45,7 @@ def load_food_schema() -> dict:
         sys.exit(1)
 
 
-def load_raw_food_files(specific_file: str = None) -> dict:
+def load_raw_food_files(specific_file: str | None = None) -> dict:
     """Load all raw food JSON files.
 
     Args:
@@ -192,11 +192,11 @@ def merge_foods(new_foods: list[dict], existing_foods: list[dict]) -> list[dict]
     return list(foods_map.values())
 
 
-def backup_food_cache() -> str:
+def backup_food_cache() -> str | None:
     """Create a backup of the existing food cache.
 
     Returns:
-        Path to backup file
+        Path to backup file, or None if no cache exists
     """
     if not FOOD_CACHE_FILE.exists():
         return None

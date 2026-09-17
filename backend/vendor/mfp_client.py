@@ -1,6 +1,7 @@
 import re
 import uuid
 from http.cookiejar import Cookie, CookieJar
+from typing import cast
 
 import myfitnesspal
 from curl_cffi import requests as cffi_requests
@@ -48,7 +49,7 @@ class CurlCffiClient(myfitnesspal.Client):
         self._log_requests_to = None
         self.unit_aware = False
         self.session = cffi_requests.Session(
-            impersonate=impersonate or "chrome"
+            impersonate=cast(str, impersonate or "chrome")
         )
         self.session.cookies.update(cookiejar)
         self._auth_data = self._get_auth_data()

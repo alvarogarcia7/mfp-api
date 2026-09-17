@@ -251,10 +251,10 @@ async def get_today_summary(date_str: str | None = None):
         food_entries = _food_entries.get(date_str, {})
 
         # Calculate food totals
-        total_calories = 0
-        total_protein = 0
-        total_carbs = 0
-        total_fat = 0
+        total_calories = 0.0
+        total_protein = 0.0
+        total_carbs = 0.0
+        total_fat = 0.0
 
         for meal_entries in food_entries.values():
             for entry in meal_entries:
@@ -266,7 +266,7 @@ async def get_today_summary(date_str: str | None = None):
         # Get exercises for the day
         exercise_cache = _load_exercise_cache()
         day_exercises = []
-        exercise_calories = 0
+        exercise_calories = 0.0
         if exercise_cache:
             day_exercises = [e for e in exercise_cache if e.get("date") == date_str]
             for exercise in day_exercises:

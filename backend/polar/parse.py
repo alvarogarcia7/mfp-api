@@ -33,7 +33,7 @@ BACKUP_DIR = BACKEND_DIR / ".backups"
 BACKUP_DIR.mkdir(exist_ok=True)
 
 
-def load_raw_polar_files(specific_file: str = None) -> dict:
+def load_raw_polar_files(specific_file: str | None = None) -> dict[str, dict]:
     """Load all raw Polar Flow calendar JSON files.
 
     Args:
@@ -123,7 +123,7 @@ def parse_and_deduplicate(raw_files: dict) -> list[dict]:
     return list(exercises_map.values())
 
 
-def parse_event(event: dict) -> dict:
+def parse_event(event: dict) -> dict | None:
     """Parse a Polar Flow calendar event into exercise format.
 
     Args:
@@ -228,11 +228,11 @@ def merge_exercises(new_exercises: list[dict], existing_exercises: list[dict]) -
     return list(exercises_map.values())
 
 
-def backup_exercise_cache() -> str:
+def backup_exercise_cache() -> str | None:
     """Create a backup of the existing exercise cache.
 
     Returns:
-        Path to backup file
+        Path to backup file, or None if no cache exists
     """
     if not EXERCISE_DB_FILE.exists():
         return None

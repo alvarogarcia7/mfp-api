@@ -33,7 +33,9 @@ POLAR_FLOW_BASE = "https://flow.polar.com"
 class PolarFlowClient:
     """Client for interacting with Polar Flow API."""
 
-    def __init__(self, cookie: str, username: str, user_id: str = None):
+    session: curl_cffi_requests.Session
+
+    def __init__(self, cookie: str, username: str, user_id: str | None = None):
         """Initialize Polar Flow client.
 
         Args:
@@ -44,10 +46,9 @@ class PolarFlowClient:
         self.cookie = cookie
         self.username = username
         self.user_id = user_id or self._extract_user_id()
-        self.session = None
         self._setup_session()
 
-    def _extract_user_id(self) -> str:
+    def _extract_user_id(self) -> str | None:
         """Try to extract user ID from cookie string (if present)."""
         # User ID might be embedded in FLOW_SESSION cookie
         # Format: FLOW_SESSION=userid_...
@@ -62,7 +63,7 @@ class PolarFlowClient:
                         pass
         return None
 
-    def _setup_session(self):
+    def _setup_session(self) -> None:
         """Set up HTTP session with authentication."""
         self.session = curl_cffi_requests.Session(impersonate="chrome")
 
@@ -258,7 +259,7 @@ class PolarFlowClient:
             return False
 
 
-def create_polar_client(cookie: str, username: str, user_id: str = None) -> PolarFlowClient:
+def create_polar_client(cookie: str, username: str, user_id: str | None = None) -> PolarFlowClient:
     """Create a Polar Flow client instance.
 
     Args:

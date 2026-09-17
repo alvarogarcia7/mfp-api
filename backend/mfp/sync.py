@@ -89,7 +89,11 @@ def sync_entry_to_mfp(client, entry_date: date, meal: str, entry: dict) -> bool:
         True if successful, False otherwise
     """
     try:
-        food_name = entry.get("name")
+        food_name = entry.get("name", "")
+        if not isinstance(food_name, str) or not food_name:
+            logger.warning(f"Entry missing valid food name on {entry_date}")
+            return False
+
         quantity = entry.get("quantity", 1.0)
 
         logger.info(f"Syncing: {food_name} ({quantity}g) to {meal} on {entry_date}")

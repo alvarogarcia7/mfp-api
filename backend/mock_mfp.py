@@ -9,7 +9,7 @@ This module provides:
 import json
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 import vcr
 from functools import wraps
 
@@ -57,7 +57,7 @@ class MockMFPClient:
             use_cassettes: If True, use/record VCR cassettes for traffic
         """
         self.use_cassettes = use_cassettes
-        self.cassettes = {}
+        self.cassettes: dict[str, Any] = {}
 
     def get_or_create_cassette(self, name: str):
         """Get or create a VCR cassette context manager."""
