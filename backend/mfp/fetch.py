@@ -20,6 +20,7 @@ import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from dotenv import load_dotenv
+from jsonschema import validate, ValidationError
 
 from ..mfp_auth import login_mfp_password, login_mfp_cookie
 from ..vendor import mfp_client
@@ -34,6 +35,9 @@ logger = logging.getLogger(__name__)
 # Raw data directory
 RAW_DATA_DIR = Path(__file__).parent.parent / "data" / "raw_food_data"
 RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+# Food schema for validation
+FOOD_SCHEMA_FILE = Path(__file__).parent.parent / "food_schema.json"
 
 
 def parse_date_range(args) -> tuple[date, date]:
@@ -99,7 +103,7 @@ def fetch_and_save_food_data(client, start_date: date, end_date: date) -> str:
                             "measurement": measurement,
                             "calories": _safe_float(entry.totals.get("calories")),
                             "protein": _safe_float(entry.totals.get("protein")),
-                            "carbohydrates": _safe_float(entry.totals.get("carbohydrates")),
+                            "carbs": _safe_float(entry.totals.get("carbohydrates")),
                             "fat": _safe_float(entry.totals.get("fat")),
                             "fiber": _safe_float(entry.totals.get("fiber")),
                             "sugar": _safe_float(entry.totals.get("sugar")),
@@ -116,6 +120,26 @@ def fetch_and_save_food_data(client, start_date: date, end_date: date) -> str:
 
     logger.info(f"Extracted {len(all_foods)} unique foods from {start_date} to {end_date}")
 
+    # Load and validate against schema
+    schema = _load_food_schema()
+    foods_list = list(all_foods.values())
+
+    # Validate each food against schema
+    invalid_foods = []
+    for food in foods_list:
+        try:
+            validate(instance=food, schema=schema)
+        except ValidationError as e:
+            logger.warning(f"Food '{food.get('name')}' failed schema validation: {e.message}")
+            invalid_foods.append(food)
+
+    # Remove invalid foods
+    for food in invalid_foods:
+        foods_list.remove(food)
+
+    if invalid_foods:
+        logger.warning(f"Removed {len(invalid_foods)} invalid foods that didn't match schema")
+
     # Save to disk
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     date_range = f"{start_date.isoformat()}_{end_date.isoformat()}"
@@ -128,13 +152,24 @@ def fetch_and_save_food_data(client, start_date: date, end_date: date) -> str:
                 "start_date": start_date.isoformat(),
                 "end_date": end_date.isoformat(),
                 "fetched_at": datetime.now().isoformat(),
-                "food_count": len(all_foods),
+                "food_count": len(foods_list),
             },
-            "foods": list(all_foods.values())
+            "foods": foods_list
         }, f, indent=2)
 
-    logger.info(f"Saved {len(all_foods)} foods to {filepath}")
+    logger.info(f"Saved {len(foods_list)} valid foods to {filepath}")
     return str(filepath)
+
+
+def _load_food_schema() -> dict:
+    """Load food validation schema from file."""
+    try:
+        with open(FOOD_SCHEMA_FILE, 'r') as f:
+            return json.load(f)
+    except Exception as e:
+        logger.error(f"Failed to load food schema: {e}")
+        # Return a minimal schema to avoid complete failure
+        return {"type": "object"}
 
 
 def _safe_float(value) -> float:
@@ -147,33 +182,34 @@ def _safe_float(value) -> float:
         return 0.0
 
 
-def _get_measurement(entry) -> str:
-    """Extract measurement from entry, preferring '1 gram' format.
+def _get_measurement(entry) -> dict:
+    """Extract measurement from entry as object with unit and value.
 
     Args:
         entry: MyFitnessPal Entry object
 
     Returns:
-        Measurement string like "1 gram", "100 g", "1 cup", etc.
+        Measurement dict with 'unit' (g or ml) and 'value' (numeric amount)
     """
     try:
         # Try to get quantity and unit from entry
         quantity = getattr(entry, "quantity", 1.0)
         unit = getattr(entry, "unit", "g")
 
-        if not unit:
+        # Normalize unit to schema-valid values (g or ml)
+        if not unit or unit.lower() not in ["g", "ml"]:
             unit = "g"
+        else:
+            unit = unit.lower()
 
-        # Prefer "1 gram" format when quantity is 1
-        if quantity == 1.0 and unit.lower() == "g":
-            return "1 gram"
-
-        # Format as "quantity unit"
-        quantity_str = str(int(quantity)) if quantity == int(quantity) else str(quantity)
-        return f"{quantity_str} {unit}".strip()
+        return {
+            "unit": unit,
+            "value": float(quantity)
+        }
     except Exception as e:
         logger.debug(f"Failed to extract measurement: {e}")
-        return "1 gram"
+        # Default to 1 gram
+        return {"unit": "g", "value": 1.0}
 
 
 def main():
