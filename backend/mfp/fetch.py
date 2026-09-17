@@ -224,7 +224,7 @@ def main():
 
     # Create client
     try:
-        client = mfp_client.build_client(cookies)
+        client = mfp_client.build_client(cookies, username=mfp_username)
     except Exception as e:
         logger.error(f"❌ Failed to create MFP client: {e}")
         sys.exit(1)

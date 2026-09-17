@@ -56,7 +56,7 @@ def get_client():
             sys.exit(1)
 
         logger.info(f"✅ Authenticated as {mfp_username}")
-        client = mfp_client.build_client(cookies)
+        client = mfp_client.build_client(cookies, username=mfp_username)
         return client
 
     except Exception as e:
