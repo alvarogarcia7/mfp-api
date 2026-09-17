@@ -2,7 +2,7 @@
 
 import logging
 from curl_cffi import requests as cffi_requests
-from vendor import mfp_client
+from .vendor import mfp_client
 
 logger = logging.getLogger(__name__)
 
