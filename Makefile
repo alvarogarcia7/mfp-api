@@ -100,8 +100,23 @@ clean:
 
 ## Download MyFitnessPal data (today)
 mfp-download:
-	@echo "Downloading MyFitnessPal data..."
-	python cli.py mfp fetch --today
+	@if [ ! -f .env.local ]; then \
+		echo "Error: .env.local not found"; \
+		echo "Copy .env.local.example to .env.local and add your credentials"; \
+		exit 1; \
+	fi
+	@. ./.env.local; \
+	if [ -n "$$MFP_SESSION_COOKIE" ]; then \
+		echo "Downloading MyFitnessPal data using session cookie..."; \
+		python cli.py mfp fetch --cookie "$$MFP_SESSION_COOKIE" --today; \
+	elif [ -n "$$MFP_USERNAME" ] && [ -n "$$MFP_PASSWORD" ]; then \
+		echo "Downloading MyFitnessPal data using credentials..."; \
+		python cli.py mfp fetch --username "$$MFP_USERNAME" --password "$$MFP_PASSWORD" --today; \
+	else \
+		echo "Error: Missing MFP credentials in .env.local"; \
+		echo "Set either MFP_SESSION_COOKIE or both MFP_USERNAME and MFP_PASSWORD"; \
+		exit 1; \
+	fi
 
 ## Parse MyFitnessPal raw data into cache
 mfp-parse:
