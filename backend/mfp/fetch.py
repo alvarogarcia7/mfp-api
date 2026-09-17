@@ -91,8 +91,12 @@ def fetch_and_save_food_data(client, start_date: date, end_date: date) -> str:
 
                     # Store first occurrence of each food (by name)
                     if name not in all_foods:
+                        # Get measurement: prefer "1 gram" format, fallback to quantity + unit
+                        measurement = _get_measurement(entry)
+
                         all_foods[name] = {
                             "name": name,
+                            "measurement": measurement,
                             "calories": _safe_float(entry.totals.get("calories")),
                             "protein": _safe_float(entry.totals.get("protein")),
                             "carbohydrates": _safe_float(entry.totals.get("carbohydrates")),
@@ -141,6 +145,35 @@ def _safe_float(value) -> float:
         return float(value)
     except (TypeError, ValueError):
         return 0.0
+
+
+def _get_measurement(entry) -> str:
+    """Extract measurement from entry, preferring '1 gram' format.
+
+    Args:
+        entry: MyFitnessPal Entry object
+
+    Returns:
+        Measurement string like "1 gram", "100 g", "1 cup", etc.
+    """
+    try:
+        # Try to get quantity and unit from entry
+        quantity = getattr(entry, "quantity", 1.0)
+        unit = getattr(entry, "unit", "g")
+
+        if not unit:
+            unit = "g"
+
+        # Prefer "1 gram" format when quantity is 1
+        if quantity == 1.0 and unit.lower() == "g":
+            return "1 gram"
+
+        # Format as "quantity unit"
+        quantity_str = str(int(quantity)) if quantity == int(quantity) else str(quantity)
+        return f"{quantity_str} {unit}".strip()
+    except Exception as e:
+        logger.debug(f"Failed to extract measurement: {e}")
+        return "1 gram"
 
 
 def main():
