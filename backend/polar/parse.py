@@ -107,8 +107,8 @@ def parse_and_deduplicate(raw_files: dict) -> list[dict]:
                 logger.debug(f"Skipping non-dict event: {type(event)}")
                 continue
 
-            # Extract event ID for deduplication
-            event_id = event.get("id")
+            # Extract event ID for deduplication (use listItemId from Polar API)
+            event_id = event.get("listItemId") or event.get("id")
             if not event_id:
                 logger.debug("Skipping event without ID")
                 continue
@@ -133,14 +133,14 @@ def parse_event(event: dict) -> dict | None:
         Parsed exercise dict or None if invalid
     """
     try:
-        # Extract event fields
-        event_id = event.get("id")
-        sport_name = event.get("sportName", "Unknown")
+        # Extract event fields from Polar API response
+        event_id = event.get("listItemId") or event.get("id")
+        event_type = event.get("type") or event.get("eventType", "Unknown")
         duration_ms = event.get("duration", 0)  # In milliseconds
         calories = event.get("calories", 0)
-        start_date = event.get("startDate", "")  # Format: "2026-09-11 17:49:06.881"
-        hr_avg = event.get("hrAvg")
+        datetime_str = event.get("datetime", "")  # Format: "2026-08-20T21:09:52.237Z"
         distance = event.get("distance")
+        title = event.get("title", "")
 
         if not duration_ms or not calories:
             logger.debug(f"Skipping event: missing duration or calories")
@@ -149,9 +149,9 @@ def parse_event(event: dict) -> dict | None:
         # Convert milliseconds to minutes
         duration_minutes = int(duration_ms / 1000 / 60)
 
-        # Extract date from startDate
+        # Extract date from datetime (ISO format: YYYY-MM-DDTHH:MM:SS.xxxZ)
         try:
-            activity_date = start_date.split(" ")[0] if " " in start_date else ""
+            activity_date = datetime_str.split("T")[0] if "T" in datetime_str else ""
         except (IndexError, AttributeError):
             activity_date = ""
 
@@ -161,17 +161,16 @@ def parse_event(event: dict) -> dict | None:
 
         exercise = {
             "id": event_id,
-            "sport_name": sport_name,
+            "sport_name": event_type,
             "duration_minutes": duration_minutes,
             "calories": int(calories),
             "date": activity_date,
-            "start_time": start_date,
-            "name": f"Polar Flow - {sport_name}",
+            "start_time": datetime_str,
+            "name": f"Polar Flow - {event_type}",
+            "title": title,
         }
 
         # Add optional fields
-        if hr_avg is not None:
-            exercise["hr_avg"] = hr_avg
         if distance is not None:
             exercise["distance"] = distance
 
