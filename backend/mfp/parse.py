@@ -19,6 +19,8 @@ from datetime import datetime
 from pathlib import Path
 from jsonschema import validate, ValidationError
 
+from . import unit_conversion
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -130,9 +132,20 @@ def parse_and_deduplicate(raw_files: dict) -> list[dict]:
 
             # Store only first occurrence of each food (by name)
             if name not in foods_map:
+                # Convert raw measurement to standardized grams
+                raw_measurement = food.get("measurement", {})
+                raw_value = raw_measurement.get("value")
+                raw_unit = raw_measurement.get("unit")
+
+                if raw_value is not None and raw_unit:
+                    measurement = unit_conversion.standardize_measurement(raw_value, raw_unit)
+                else:
+                    # Default if measurement is missing
+                    measurement = {"unit": "g", "value": 100.0}
+
                 foods_map[name] = {
                     "name": name,
-                    "measurement": {"unit": "g", "value": 100},
+                    "measurement": measurement,
                     "calories": food.get("calories", 0),
                     "protein": food.get("protein", 0),
                     "carbs": food.get("carbohydrates", 0),

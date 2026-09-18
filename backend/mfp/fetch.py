@@ -183,33 +183,29 @@ def _safe_float(value) -> float:
 
 
 def _get_measurement(entry) -> dict:
-    """Extract measurement from entry as object with unit and value.
+    """Extract raw measurement from entry without processing.
 
     Args:
         entry: MyFitnessPal Entry object
 
     Returns:
-        Measurement dict with 'unit' (g or ml) and 'value' (numeric amount)
+        Measurement dict with raw 'unit' and 'value' from MFP
     """
     try:
-        # Try to get quantity and unit from entry
-        quantity = getattr(entry, "quantity", 1.0)
-        unit = getattr(entry, "unit", "g")
-
-        # Normalize unit to schema-valid values (g or ml)
-        if not unit or unit.lower() not in ["g", "ml"]:
-            unit = "g"
-        else:
-            unit = unit.lower()
+        # Capture raw quantity and unit as-is from MFP
+        quantity = getattr(entry, "quantity", None)
+        unit = getattr(entry, "unit", None)
 
         return {
             "unit": unit,
-            "value": float(quantity)
+            "value": float(quantity) if quantity is not None else None
         }
     except Exception as e:
         logger.debug(f"Failed to extract measurement: {e}")
-        # Default to 1 gram
-        return {"unit": "g", "value": 1.0}
+        return {
+            "unit": None,
+            "value": None
+        }
 
 
 def main():

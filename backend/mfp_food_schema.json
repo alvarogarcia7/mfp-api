@@ -12,18 +12,15 @@
     },
     "measurement": {
       "type": "object",
-      "description": "Standard measurement for this food",
+      "description": "Raw measurement from MFP API (unprocessed)",
       "properties": {
         "unit": {
-          "type": "string",
-          "description": "Measurement unit (g or ml)",
-          "enum": ["g", "ml"]
+          "type": ["string", "null"],
+          "description": "Measurement unit as returned by MFP (any unit string)"
         },
         "value": {
-          "type": "number",
-          "description": "Measurement value",
-          "minimum": 0.1,
-          "maximum": 10000
+          "type": ["number", "null"],
+          "description": "Measurement value (numeric or missing)"
         }
       },
       "required": ["unit", "value"],
