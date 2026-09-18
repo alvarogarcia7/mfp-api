@@ -58,3 +58,7 @@ backend/data/
 .env
 .env.local
 .env.*.local
+
+# Polar Flow curl requests (contain session cookies)
+.env.polar.request.local
+.env.polar.request.*
