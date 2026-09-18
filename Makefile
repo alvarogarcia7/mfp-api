@@ -108,10 +108,10 @@ mfp-download:
 	@. ./.env.local; \
 	if [ -n "$$MFP_SESSION_COOKIE" ]; then \
 		echo "Downloading MyFitnessPal data using session cookie..."; \
-		uv run python cli.py mfp fetch --cookie "$$MFP_SESSION_COOKIE" --today; \
+		uv run python cli.py mfp fetch --cookie "$$MFP_SESSION_COOKIE" --last-two-weeks; \
 	elif [ -n "$$MFP_USERNAME" ] && [ -n "$$MFP_PASSWORD" ]; then \
 		echo "Downloading MyFitnessPal data using credentials..."; \
-		uv run python cli.py mfp fetch --username "$$MFP_USERNAME" --password "$$MFP_PASSWORD" --today; \
+		uv run python cli.py mfp fetch --username "$$MFP_USERNAME" --password "$$MFP_PASSWORD" --last-two-weeks; \
 	else \
 		echo "Error: Missing MFP credentials in .env.local"; \
 		echo "Set either MFP_SESSION_COOKIE or both MFP_USERNAME and MFP_PASSWORD"; \
