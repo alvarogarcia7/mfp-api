@@ -34,7 +34,7 @@ RAW_DATA_DIR = Path(__file__).parent.parent / "data" / "raw_polar_data"
 RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # Polar Flow API
-POLAR_API_BASE = "https://flow.polar.com/api/diary"
+POLAR_API_BASE = "https://flow.polar.com"
 
 
 def get_last_entry_date() -> date | None:
@@ -114,8 +114,8 @@ def parse_date_range(args) -> tuple[date, date]:
 
 
 def format_polar_date(d: date) -> str:
-    """Convert date to Polar Flow API format (YYYY-MM-DD)."""
-    return d.isoformat()
+    """Convert date to Polar Flow API format (D.M.Y)."""
+    return f"{d.day}.{d.month}.{d.year}"
 
 
 def fetch_and_save_polar_data(session, start_date: date, end_date: date) -> str:
@@ -136,17 +136,17 @@ def fetch_and_save_polar_data(session, start_date: date, end_date: date) -> str:
     end_polar = format_polar_date(end_date)
 
     try:
-        # Fetch calendar events via updateCalendar endpoint
-        url = f"{POLAR_API_BASE}/updateCalendar"
-        payload = {
-            "fromDate": start_polar,
-            "toDate": end_polar,
+        # Fetch calendar events
+        url = f"{POLAR_API_BASE}/training/getCalendarEvents"
+        params = {
+            "start": start_polar,
+            "end": end_polar,
         }
 
         logger.debug(f"Request URL: {url}")
-        logger.debug(f"Request payload: {payload}")
+        logger.debug(f"Request params: {params}")
 
-        response = session.post(url, json=payload, timeout=30)
+        response = session.get(url, params=params, timeout=30)
 
         logger.debug(f"Response status: {response.status_code}")
         logger.debug(f"Response headers: {response.headers}")
@@ -294,11 +294,9 @@ def main():
 
         # Set required headers (matching Polar Flow web client)
         session.headers.update({
-            "accept": "*/*",
+            "accept": "application/json, text/javascript, */*; q=0.01",
             "accept-language": "en-US,en;q=0.9",
             "cache-control": "no-cache",
-            "content-type": "application/json; charset=UTF-8",
-            "origin": "https://flow.polar.com",
             "pragma": "no-cache",
             "referer": "https://flow.polar.com/diary",
             "sec-ch-ua": '"Chromium";v="152", "Not?A_Brand";v="24", "Google Chrome";v="152"',
