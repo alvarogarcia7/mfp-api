@@ -34,7 +34,7 @@ RAW_DATA_DIR = Path(__file__).parent.parent / "data" / "raw_polar_data"
 RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # Polar Flow API
-POLAR_API_BASE = "https://flow.polar.com"
+POLAR_API_BASE = "https://flow.polar.com/api/diary"
 
 
 def get_last_entry_date() -> date | None:
@@ -114,8 +114,8 @@ def parse_date_range(args) -> tuple[date, date]:
 
 
 def format_polar_date(d: date) -> str:
-    """Convert date to Polar Flow format (D.M.Y)."""
-    return f"{d.day}.{d.month}.{d.year}"
+    """Convert date to Polar Flow API format (YYYY-MM-DD)."""
+    return d.isoformat()
 
 
 def fetch_and_save_polar_data(session, start_date: date, end_date: date) -> str:
@@ -136,29 +136,39 @@ def fetch_and_save_polar_data(session, start_date: date, end_date: date) -> str:
     end_polar = format_polar_date(end_date)
 
     try:
-        # Fetch calendar events
-        url = f"{POLAR_API_BASE}/training/getCalendarEvents"
-        params = {
-            "start": start_polar,
-            "end": end_polar,
+        # Fetch calendar events via updateCalendar endpoint
+        url = f"{POLAR_API_BASE}/updateCalendar"
+        payload = {
+            "fromDate": start_polar,
+            "toDate": end_polar,
         }
 
         logger.debug(f"Request URL: {url}")
-        logger.debug(f"Request params: {params}")
+        logger.debug(f"Request payload: {payload}")
 
-        response = session.get(url, params=params, timeout=30)
+        response = session.post(url, json=payload, timeout=30)
 
         logger.debug(f"Response status: {response.status_code}")
+        logger.debug(f"Response headers: {response.headers}")
+        logger.debug(f"Response content length: {len(response.content)}")
 
         if response.status_code == 401:
             logger.error("Polar Flow returned 401 Unauthorized")
             raise Exception("HTTP 401: Invalid Polar Flow credentials or expired session. Please update your cookie.")
+
+        if response.status_code == 403:
+            logger.error("Polar Flow returned 403 Forbidden - Missing required session cookies")
+            raise Exception("HTTP 403: Missing required session cookies (PLAY_SESSION_FLOW, AWSALB). Get full cookie string from browser DevTools.")
 
         if response.status_code == 404:
             logger.error(f"Polar Flow API returned 404. URL: {response.url}")
             raise Exception(f"HTTP 404: Polar Flow API endpoint not found.")
 
         response.raise_for_status()
+
+        # Log response content for debugging if it's small
+        if len(response.content) < 1000:
+            logger.debug(f"Response content: {response.text}")
 
         data = response.json()
 
@@ -256,11 +266,17 @@ def main():
         logger.error("❌ Polar Flow session cookie not found")
         logger.error("   Set POLAR_FLOW_COOKIE in .env.local or use --cookie argument")
         logger.error("")
-        logger.error("   To get your cookie:")
+        logger.error("   To get your full cookie string (includes FLOW_SESSION, PLAY_SESSION_FLOW, etc):")
         logger.error("   1. Log in to https://flow.polar.com/")
-        logger.error("   2. Open DevTools (F12) → Network tab")
-        logger.error("   3. Make a request (e.g., navigate to Training/Diary)")
-        logger.error("   4. Copy the full 'Cookie' header value")
+        logger.error("   2. Open DevTools (F12) → Network → select any API request to /api/diary/*")
+        logger.error("   3. In the Request Headers section, copy the entire 'Cookie' header value")
+        logger.error("   4. Paste into .env.local as: POLAR_FLOW_COOKIE=<full_cookie_string>")
+        logger.error("")
+        logger.error("   The cookie must include:")
+        logger.error("   - FLOW_SESSION=<jwt_token>")
+        logger.error("   - PLAY_SESSION_FLOW=<session_token>")
+        logger.error("   - AWSALB=<load_balancer_token>")
+        logger.error("   - AWSALBCORS=<cors_token>")
         sys.exit(1)
 
     # Create session with authentication
@@ -268,15 +284,29 @@ def main():
         logger.info("Setting up Polar Flow session")
         session = curl_cffi_requests.Session(impersonate="chrome")
 
-        # Set cookies
-        session.headers["Cookie"] = cookie
+        # Set cookies (format: FLOW_SESSION=<jwt_token>)
+        # If cookie is just the token, wrap it with FLOW_SESSION= prefix
+        if cookie.startswith("eyJ"):  # JWT tokens start with eyJ (base64 for {"})
+            cookie_header = f"FLOW_SESSION={cookie}"
+        else:
+            cookie_header = cookie
+        session.headers["Cookie"] = cookie_header
 
-        # Set required headers
+        # Set required headers (matching Polar Flow web client)
         session.headers.update({
             "accept": "*/*",
             "accept-language": "en-US,en;q=0.9",
             "cache-control": "no-cache",
+            "content-type": "application/json; charset=UTF-8",
+            "origin": "https://flow.polar.com",
             "pragma": "no-cache",
+            "referer": "https://flow.polar.com/diary",
+            "sec-ch-ua": '"Chromium";v="152", "Not?A_Brand";v="24", "Google Chrome";v="152"',
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": '"macOS"',
+            "sec-fetch-dest": "empty",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-site": "same-origin",
             "x-requested-with": "XMLHttpRequest",
         })
 
