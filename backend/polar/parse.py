@@ -334,12 +334,12 @@ def summarize_exercises(exercises: list[dict]) -> None:
             activities_per_day += count
             total_calories += calories
             total_activities += count
-            logger.info(f"  {count}x {sport} (subtotal={calories} kcal)")
+            logger.info(f"  {count}x {sport} (subtotal={calories:,} kcal)")
 
-        logger.info(f"  → Day total: {activities_per_day} activities ({day_total} kcal)")
+        logger.info(f"  → Day total: {activities_per_day} activities ({day_total:,} kcal)")
 
     logger.info("-" * 60)
-    logger.info(f"Total: {total_activities} activities ({total_calories} kcal)")
+    logger.info(f"Total: {total_activities} activities ({total_calories:,} kcal)")
     logger.info("=" * 60)
 
 
