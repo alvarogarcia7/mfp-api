@@ -135,7 +135,12 @@ def parse_event(event: dict) -> dict | None:
     try:
         # Extract event fields from Polar API response
         event_id = event.get("listItemId") or event.get("id")
-        event_type = event.get("type") or event.get("eventType", "Unknown")
+        # Use sport name if available, otherwise fall back to type
+        sport_info = event.get("sport")
+        if isinstance(sport_info, dict):
+            event_type = sport_info.get("name", event.get("type", "Unknown"))
+        else:
+            event_type = sport_info or event.get("type") or event.get("eventType", "Unknown")
         duration_ms = event.get("duration", 0)  # In milliseconds
         calories = event.get("calories", 0)
         datetime_str = event.get("datetime", "")  # Format: "2026-08-20T21:09:52.237Z"
@@ -282,7 +287,7 @@ def save_exercise_cache(exercises: list[dict], replace_mode: bool = False, force
 
 
 def summarize_exercises(exercises: list[dict]) -> None:
-    """Print a summary of exercises grouped by activity type.
+    """Print a summary of exercises grouped by date and activity type.
 
     Args:
         exercises: List of parsed exercises
@@ -291,17 +296,21 @@ def summarize_exercises(exercises: list[dict]) -> None:
         logger.info("No exercises to summarize")
         return
 
-    # Group by sport_name and sum calories
-    activity_summary = {}
+    # Group by date, then by sport_name
+    daily_summary = {}
     for exercise in exercises:
+        date_str = exercise.get("date", "Unknown")
         sport = exercise.get("sport_name", "Unknown")
         calories = exercise.get("calories", 0)
 
-        if sport not in activity_summary:
-            activity_summary[sport] = {"count": 0, "calories": 0}
+        if date_str not in daily_summary:
+            daily_summary[date_str] = {}
 
-        activity_summary[sport]["count"] += 1
-        activity_summary[sport]["calories"] += calories
+        if sport not in daily_summary[date_str]:
+            daily_summary[date_str][sport] = {"count": 0, "calories": 0}
+
+        daily_summary[date_str][sport]["count"] += 1
+        daily_summary[date_str][sport]["calories"] += calories
 
     # Print summary
     logger.info("=" * 60)
@@ -309,14 +318,28 @@ def summarize_exercises(exercises: list[dict]) -> None:
     logger.info("=" * 60)
 
     total_calories = 0
-    for sport in sorted(activity_summary.keys()):
-        count = activity_summary[sport]["count"]
-        calories = activity_summary[sport]["calories"]
-        total_calories += calories
-        logger.info(f"{count}x {sport} (subtotal={calories} kcal)")
+    total_activities = 0
+
+    # Sort by date
+    for date_str in sorted(daily_summary.keys()):
+        day_total = 0
+        activities_per_day = 0
+
+        logger.info(f"\n📅 {date_str}")
+        # Sort sports alphabetically within each day
+        for sport in sorted(daily_summary[date_str].keys()):
+            count = daily_summary[date_str][sport]["count"]
+            calories = daily_summary[date_str][sport]["calories"]
+            day_total += calories
+            activities_per_day += count
+            total_calories += calories
+            total_activities += count
+            logger.info(f"  {count}x {sport} (subtotal={calories} kcal)")
+
+        logger.info(f"  → Day total: {activities_per_day} activities ({day_total} kcal)")
 
     logger.info("-" * 60)
-    logger.info(f"Total: {len(exercises)} activities ({total_calories} kcal)")
+    logger.info(f"Total: {total_activities} activities ({total_calories} kcal)")
     logger.info("=" * 60)
 
 

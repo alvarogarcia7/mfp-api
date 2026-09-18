@@ -118,6 +118,42 @@ def format_polar_date(d: date) -> str:
     return f"{d.day}.{d.month}.{d.year}"
 
 
+def fetch_exercise_details(session, exercise_id: int) -> dict | None:
+    """Fetch detailed information for a single exercise.
+
+    Args:
+        session: Requests session with authentication
+        exercise_id: Polar exercise ID (listItemId)
+
+    Returns:
+        Exercise details dict or None if request fails
+    """
+    try:
+        # Try multiple possible API endpoints for exercise details
+        endpoints = [
+            f"{POLAR_API_BASE}/api/training/{exercise_id}/details",
+            f"{POLAR_API_BASE}/api/training/exercise/{exercise_id}",
+            f"{POLAR_API_BASE}/training/analysis/{exercise_id}/data",
+        ]
+
+        for url in endpoints:
+            try:
+                response = session.get(url, timeout=10)
+
+                if response.status_code == 200:
+                    logger.debug(f"Found exercise details at {url}")
+                    return response.json()
+            except Exception:
+                continue
+
+        logger.debug(f"No exercise details API endpoint found for ID {exercise_id}")
+        return None
+
+    except Exception as e:
+        logger.debug(f"Error fetching exercise details for ID {exercise_id}: {e}")
+        return None
+
+
 def fetch_and_save_polar_data(session, start_date: date, end_date: date) -> str:
     """Fetch calendar events from Polar Flow for date range and save to disk.
 
@@ -175,12 +211,32 @@ def fetch_and_save_polar_data(session, start_date: date, end_date: date) -> str:
         # Log data structure for debugging
         if isinstance(data, list):
             logger.info(f"Fetched {len(data)} calendar events from Polar Flow")
+            events = data
         elif isinstance(data, dict):
             events = data.get("events", [])
             logger.info(f"Fetched {len(events)} calendar events from Polar Flow")
         else:
             logger.warning(f"Unexpected response format: {type(data)}")
             events = []
+
+        # Fetch exercise details for each event to get sport type
+        logger.info(f"Fetching detailed exercise information for {len(events)} events...")
+        for event in events:
+            if isinstance(event, dict) and event.get("listItemId"):
+                exercise_id = event["listItemId"]
+                details = fetch_exercise_details(session, exercise_id)
+                if details and isinstance(details, dict):
+                    # Merge sport info into event
+                    if "sport" in details:
+                        event["sport"] = details["sport"]
+                    if "sportId" in details:
+                        event["sportId"] = details["sportId"]
+                    # Log progress every 10 exercises
+                    if len([e for e in events if "sport" in e]) % 10 == 0:
+                        logger.debug(f"Fetched details for {len([e for e in events if 'sport' in e])} events")
+
+        exercises_with_sport = len([e for e in events if "sport" in e])
+        logger.info(f"Successfully fetched sport details for {exercises_with_sport}/{len(events)} exercises")
 
         # Save to disk
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
