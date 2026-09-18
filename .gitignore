@@ -50,6 +50,7 @@ htmlcov/
 *.sqlite3
 session_*
 backend/data/
+backend/**/.backups/
 
 # uv
 .uv/
