@@ -201,7 +201,7 @@ def fetch_and_save_polar_data(session, start_date: date, end_date: date) -> str:
 
 def main():
     # Load environment variables from .env.local
-    env_path = Path(__file__).parent.parent / ".env.local"
+    env_path = Path(__file__).parent.parent.parent / ".env.local"
     load_dotenv(env_path)
 
     parser = argparse.ArgumentParser(
