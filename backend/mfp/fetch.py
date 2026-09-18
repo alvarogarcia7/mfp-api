@@ -36,8 +36,8 @@ logger = logging.getLogger(__name__)
 RAW_DATA_DIR = Path(__file__).parent.parent / "data" / "raw_food_data"
 RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-# Food schema for validation
-FOOD_SCHEMA_FILE = Path(__file__).parent.parent / "food_schema.json"
+# MFP Food Fact schema for validating raw API responses
+MFP_FOOD_SCHEMA_FILE = Path(__file__).parent.parent / "mfp_food_schema.json"
 
 
 def parse_date_range(args) -> tuple[date, date]:
@@ -162,12 +162,12 @@ def fetch_and_save_food_data(client, start_date: date, end_date: date) -> str:
 
 
 def _load_food_schema() -> dict:
-    """Load food validation schema from file."""
+    """Load MFP Food Fact schema from file."""
     try:
-        with open(FOOD_SCHEMA_FILE, 'r') as f:
+        with open(MFP_FOOD_SCHEMA_FILE, 'r') as f:
             return json.load(f)
     except Exception as e:
-        logger.error(f"Failed to load food schema: {e}")
+        logger.error(f"Failed to load MFP food schema: {e}")
         # Return a minimal schema to avoid complete failure
         return {"type": "object"}
 

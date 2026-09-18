@@ -30,13 +30,24 @@ logger = logging.getLogger(__name__)
 BACKEND_DIR = Path(__file__).parent.parent
 RAW_DATA_DIR = BACKEND_DIR / "data" / "raw_food_data"
 FOOD_CACHE_FILE = BACKEND_DIR / ".food_cache.json"
+MFP_FOOD_SCHEMA_FILE = BACKEND_DIR / "mfp_food_schema.json"
 FOOD_SCHEMA_FILE = BACKEND_DIR / "food_schema.json"
 BACKUP_DIR = BACKEND_DIR / ".backups"
 BACKUP_DIR.mkdir(exist_ok=True)
 
 
+def load_mfp_schema() -> dict:
+    """Load MFP Food Fact schema for validating raw input data."""
+    try:
+        with open(MFP_FOOD_SCHEMA_FILE, 'r') as f:
+            return json.load(f)
+    except Exception as e:
+        logger.error(f"Failed to load MFP food schema: {e}")
+        sys.exit(1)
+
+
 def load_food_schema() -> dict:
-    """Load food validation schema."""
+    """Load domain Food Fact schema for validating output data."""
     try:
         with open(FOOD_SCHEMA_FILE, 'r') as f:
             return json.load(f)
@@ -45,11 +56,12 @@ def load_food_schema() -> dict:
         sys.exit(1)
 
 
-def load_raw_food_files(specific_file: str | None = None) -> dict:
-    """Load all raw food JSON files.
+def load_raw_food_files(specific_file: str | None = None, mfp_schema: dict | None = None) -> dict:
+    """Load all raw food JSON files and validate against MFP schema.
 
     Args:
         specific_file: If provided, load only this file
+        mfp_schema: MFP Food Fact schema for validating input data
 
     Returns:
         Dict mapping filename -> raw data
@@ -77,6 +89,16 @@ def load_raw_food_files(specific_file: str | None = None) -> dict:
             logger.info(f"Loading {filepath.name}")
             with open(filepath, 'r') as f:
                 data = json.load(f)
+
+            # Validate raw foods against MFP schema
+            if mfp_schema:
+                foods = data.get('foods', [])
+                for idx, food in enumerate(foods):
+                    try:
+                        validate(instance=food, schema=mfp_schema)
+                    except ValidationError as e:
+                        logger.warning(f"Food {idx} in {filepath.name} failed MFP validation: {food.get('name')} - {e.message}")
+
             raw_files[filepath.name] = data
             logger.debug(f"  Loaded {len(data.get('foods', []))} foods")
         except Exception as e:
@@ -286,12 +308,13 @@ def main():
     logger.info("Food Data Parser")
     logger.info("=" * 60)
 
-    # Load schema
-    schema = load_food_schema()
+    # Load schemas
+    mfp_schema = load_mfp_schema()
+    domain_schema = load_food_schema()
 
-    # Load raw files
+    # Load raw files with MFP validation
     logger.info(f"Looking for raw food data in {RAW_DATA_DIR}")
-    raw_files = load_raw_food_files(args.file)
+    raw_files = load_raw_food_files(args.file, mfp_schema)
 
     if not raw_files:
         logger.error("No raw food data to process")
@@ -302,8 +325,8 @@ def main():
     new_foods = parse_and_deduplicate(raw_files)
     logger.info(f"Parsed {len(new_foods)} unique foods")
 
-    # Validate
-    validate_foods(new_foods, schema)
+    # Validate parsed output against domain schema
+    validate_foods(new_foods, domain_schema)
 
     # Merge or replace
     if args.replace:

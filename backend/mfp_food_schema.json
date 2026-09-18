@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Food Fact Schema",
-  "description": "Schema for parsed domain food facts in the local cache database",
+  "title": "MFP Food Fact Schema",
+  "description": "Schema for raw food data from MyFitnessPal API",
   "type": "object",
   "properties": {
     "name": {
@@ -41,9 +41,9 @@
       "minimum": 0,
       "maximum": 1000
     },
-    "carbs": {
+    "carbohydrates": {
       "type": "number",
-      "description": "Carbohydrates in grams",
+      "description": "Carbohydrates in grams (raw MFP field name)",
       "minimum": 0,
       "maximum": 1000
     },
@@ -88,34 +88,8 @@
       "description": "Potassium in milligrams",
       "minimum": 0,
       "maximum": 1000000
-    },
-    "food_id": {
-      "type": ["string", "null"],
-      "description": "MyFitnessPal food ID for API lookups",
-      "minLength": 1,
-      "maxLength": 100
-    },
-    "weight_id": {
-      "type": ["string", "null"],
-      "description": "MyFitnessPal weight ID for API lookups",
-      "minLength": 1,
-      "maxLength": 100
-    },
-    "brand": {
-      "type": ["string", "null"],
-      "description": "Brand name if applicable",
-      "maxLength": 500
-    },
-    "verified": {
-      "type": ["boolean", "null"],
-      "description": "Whether the food data is verified by MyFitnessPal"
-    },
-    "serving": {
-      "type": ["string", "null"],
-      "description": "Serving size description",
-      "maxLength": 200
     }
   },
-  "required": ["name", "measurement", "calories", "protein", "carbs", "fat", "fiber", "sugar", "sodium", "cholesterol", "saturated_fat", "potassium"],
-  "additionalProperties": false
+  "required": ["name", "measurement", "calories", "protein", "carbohydrates", "fat", "fiber", "sugar", "sodium", "cholesterol", "saturated_fat", "potassium"],
+  "additionalProperties": true
 }
