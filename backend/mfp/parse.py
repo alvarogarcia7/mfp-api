@@ -153,7 +153,7 @@ def parse_and_deduplicate(raw_files: dict) -> list[dict]:
                     "measurement": measurement,
                     "calories": food.get("calories", 0),
                     "protein": food.get("protein", 0),
-                    "carbs": food.get("carbohydrates", 0),
+                    "carbs": food.get("carbs", 0),
                     "fat": food.get("fat", 0),
                     "fiber": food.get("fiber", 0),
                     "sugar": food.get("sugar", 0),

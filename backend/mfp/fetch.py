@@ -119,7 +119,7 @@ def fetch_and_save_food_data(client, start_date: date, end_date: date) -> str:
                             "raw": raw_data,
                             "calories": _safe_float(entry.totals.get("calories")),
                             "protein": _safe_float(entry.totals.get("protein")),
-                            "carbs": _safe_float(entry.totals.get("carbohydrates")),
+                            "carbs": _safe_float(entry.totals.get("carbs")),
                             "fat": _safe_float(entry.totals.get("fat")),
                             "fiber": _safe_float(entry.totals.get("fiber")),
                             "sugar": _safe_float(entry.totals.get("sugar")),

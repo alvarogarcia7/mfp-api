@@ -38,9 +38,9 @@
       "minimum": 0,
       "maximum": 1000
     },
-    "carbohydrates": {
+    "carbs": {
       "type": "number",
-      "description": "Carbohydrates in grams (raw MFP field name)",
+      "description": "Carbohydrates in grams (MFP API field name)",
       "minimum": 0,
       "maximum": 1000
     },
@@ -100,6 +100,6 @@
       "additionalProperties": true
     }
   },
-  "required": ["name", "measurement", "calories", "protein", "carbohydrates", "fat", "fiber", "sugar", "sodium", "cholesterol", "saturated_fat", "potassium"],
+  "required": ["name", "measurement", "calories", "protein", "carbs", "fat", "fiber", "sugar", "sodium", "cholesterol", "saturated_fat", "potassium"],
   "additionalProperties": true
 }
