@@ -1,0 +1,92 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Food Diary Entry Schema",
+  "description": "Schema for daily food diary entries from MyFitnessPal",
+  "type": "object",
+  "properties": {
+    "date": {
+      "type": "string",
+      "description": "Date in YYYY-MM-DD format",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "synced_at": {
+      "type": "string",
+      "description": "ISO 8601 timestamp when entry was synced",
+      "format": "date-time"
+    },
+    "meals": {
+      "type": "array",
+      "description": "Array of meals for this date",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Meal name (e.g., Breakfast, Lunch, Dinner)",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "entries": {
+            "type": "array",
+            "description": "Array of food entries in this meal",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Food item name",
+                  "minLength": 1,
+                  "maxLength": 500
+                },
+                "quantity": {
+                  "type": ["number", "null"],
+                  "description": "Quantity consumed"
+                },
+                "unit": {
+                  "type": ["string", "null"],
+                  "description": "Unit of measurement (g, cup, tbsp, etc.)"
+                },
+                "totals": {
+                  "type": "object",
+                  "description": "Nutritional totals for this entry",
+                  "additionalProperties": true
+                },
+                "url": {
+                  "type": ["string", "null"],
+                  "description": "MyFitnessPal URL for this food entry"
+                },
+                "timestamp": {
+                  "type": "string",
+                  "description": "ISO 8601 timestamp when entry was recorded"
+                }
+              },
+              "required": ["name", "totals"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["name", "entries"],
+        "additionalProperties": false
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Metadata about this diary entry",
+      "properties": {
+        "total_meals": {
+          "type": "integer",
+          "description": "Number of meals logged",
+          "minimum": 0
+        },
+        "total_foods": {
+          "type": "integer",
+          "description": "Total number of food entries",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "required": ["date", "synced_at", "meals", "metadata"],
+  "additionalProperties": false
+}

@@ -24,7 +24,7 @@ from jsonschema import validate, ValidationError
 
 from ..mfp_auth import login_mfp_password, login_mfp_cookie
 from ..vendor import mfp_client
-from . import unit_cache
+from . import unit_cache, diary_sync
 
 # Configure logging
 logging.basicConfig(
@@ -84,12 +84,16 @@ def fetch_and_save_food_data(client, start_date: date, end_date: date) -> str:
 
     all_foods = {}  # {name -> food_data}
     units_cache = unit_cache.UnitMeasurementsCache()
+    diary_manager = diary_sync.FoodDiarySyncManager()
 
     current = start_date
     while current <= end_date:
         try:
             logger.debug(f"Fetching diary for {current}")
             mfp_day = client.get_date(current)
+
+            # Sync diary entry for this date
+            diary_manager.add_diary_entry(current, mfp_day)
 
             for meal in mfp_day.meals:
                 for entry in meal.entries:
