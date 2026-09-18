@@ -7,7 +7,7 @@ Implements request/response caching with filesystem persistence.
 import json
 import logging
 from datetime import date, datetime
-from hashlib import md5
+from hashlib import md5, sha1, sha256
 from pathlib import Path
 from typing import Any, Optional
 
@@ -30,36 +30,57 @@ class MFPResponseCache:
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
-    def _get_cache_key(self, endpoint: str, params: dict) -> str:
-        """Generate a cache key from endpoint and parameters.
+    def _get_cache_key(self, endpoint: str, params: dict) -> dict[str, str]:
+        """Generate cache keys from endpoint and parameters.
 
         Args:
             endpoint: API endpoint (e.g., "/diary")
             params: Query parameters
 
         Returns:
-            MD5 hash of endpoint + params
+            Dict with SHA-1, SHA-256, and MD5 hashes
         """
         key_data = f"{endpoint}:{json.dumps(params, sort_keys=True)}"
-        return md5(key_data.encode()).hexdigest()
+        return {
+            "sha256": sha256(key_data.encode()).hexdigest(),
+            "sha1": sha1(key_data.encode()).hexdigest(),
+            "md5": md5(key_data.encode()).hexdigest(),
+        }
 
-    def _get_cache_file(self, cache_key: str) -> Path:
+    def _get_cache_file(self, cache_key: dict[str, str]) -> Path:
         """Get the cache file path for a given key.
 
         Args:
-            cache_key: Cache key (usually MD5 hash)
+            cache_key: Cache key dict with SHA-256, SHA-1, MD5 hashes
 
         Returns:
-            Path to cache file
+            Path to cache file (named with SHA-256 hash)
         """
-        return self.cache_dir / f"{cache_key}.json"
+        return self.cache_dir / f"{cache_key['sha256']}.json"
+
+    def _verify_cache_integrity(self, cache_entry: dict, expected_key: dict[str, str]) -> bool:
+        """Verify cache entry integrity by checking stored hashes.
+
+        Args:
+            cache_entry: Cache entry from disk
+            expected_key: Expected hash values
+
+        Returns:
+            True if hashes match
+        """
+        stored_hashes = cache_entry.get("hashes", {})
+        return (
+            stored_hashes.get("sha256") == expected_key["sha256"]
+            and stored_hashes.get("sha1") == expected_key["sha1"]
+            and stored_hashes.get("md5") == expected_key["md5"]
+        )
 
     def save_response(
         self,
         endpoint: str,
         params: dict,
         response_data: Any,
-        date_str: str = None,
+        date_str: str | None = None,
     ) -> Path:
         """Save an API response to cache.
 
@@ -83,6 +104,7 @@ class MFPResponseCache:
             "params": params,
             "date": date_str,
             "cached_at": datetime.now().isoformat(),
+            "hashes": cache_key,
             "data": response_data,
         }
 
@@ -137,7 +159,14 @@ class MFPResponseCache:
         """
         cache_key = self._get_cache_key(endpoint, params)
         cache_file = self._get_cache_file(cache_key)
-        return cache_file.exists()
+        if not cache_file.exists():
+            return False
+        try:
+            with open(cache_file, "r") as f:
+                cache_entry = json.load(f)
+            return self._verify_cache_integrity(cache_entry, cache_key)
+        except Exception:
+            return False
 
     def list_cached_dates(self, endpoint: str) -> list[str]:
         """List all cached dates for an endpoint.
@@ -199,7 +228,7 @@ class CachedMFPClient:
         Returns:
             Day object from MFP
         """
-        if self.use_cache:
+        if self.use_cache and self.cache:
             # Try to load from cache
             cached = self.cache.load_response(
                 "/diary",
@@ -214,7 +243,7 @@ class CachedMFPClient:
         day = self.client.get_date(target_date)
 
         # Cache the response
-        if self.use_cache and day:
+        if self.use_cache and self.cache and day:
             try:
                 day_data = {
                     "date": target_date.isoformat(),
