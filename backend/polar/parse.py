@@ -281,6 +281,45 @@ def save_exercise_cache(exercises: list[dict], replace_mode: bool = False, force
     logger.info(f"✅ Saved {len(exercises)} exercises to {EXERCISE_DB_FILE}")
 
 
+def summarize_exercises(exercises: list[dict]) -> None:
+    """Print a summary of exercises grouped by activity type.
+
+    Args:
+        exercises: List of parsed exercises
+    """
+    if not exercises:
+        logger.info("No exercises to summarize")
+        return
+
+    # Group by sport_name and sum calories
+    activity_summary = {}
+    for exercise in exercises:
+        sport = exercise.get("sport_name", "Unknown")
+        calories = exercise.get("calories", 0)
+
+        if sport not in activity_summary:
+            activity_summary[sport] = {"count": 0, "calories": 0}
+
+        activity_summary[sport]["count"] += 1
+        activity_summary[sport]["calories"] += calories
+
+    # Print summary
+    logger.info("=" * 60)
+    logger.info("📊 Exercise Summary")
+    logger.info("=" * 60)
+
+    total_calories = 0
+    for sport in sorted(activity_summary.keys()):
+        count = activity_summary[sport]["count"]
+        calories = activity_summary[sport]["calories"]
+        total_calories += calories
+        logger.info(f"{count}x {sport} (subtotal={calories} kcal)")
+
+    logger.info("-" * 60)
+    logger.info(f"Total: {len(exercises)} activities ({total_calories} kcal)")
+    logger.info("=" * 60)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Parse raw Polar Flow calendar events into Exercise Diary JSON"
@@ -348,6 +387,9 @@ def main():
     logger.info("=" * 60)
     logger.info(f"✅ Exercise database updated: {len(final_exercises)} exercises")
     logger.info("=" * 60)
+
+    # Print activity summary
+    summarize_exercises(final_exercises)
 
 
 if __name__ == "__main__":
