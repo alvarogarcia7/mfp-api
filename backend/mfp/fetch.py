@@ -124,21 +124,22 @@ def fetch_and_save_food_data(client, start_date: date, end_date: date) -> str:
     schema = _load_food_schema()
     foods_list = list(all_foods.values())
 
-    # Validate each food against schema
-    invalid_foods = []
+    # Validate each food against schema and mark validity
+    valid_count = 0
+    invalid_count = 0
     for food in foods_list:
         try:
             validate(instance=food, schema=schema)
+            food["valid"] = True
+            valid_count += 1
         except ValidationError as e:
             logger.warning(f"Food '{food.get('name')}' failed schema validation: {e.message}")
-            invalid_foods.append(food)
+            food["valid"] = False
+            food["validation_error"] = e.message
+            invalid_count += 1
 
-    # Remove invalid foods
-    for food in invalid_foods:
-        foods_list.remove(food)
-
-    if invalid_foods:
-        logger.warning(f"Removed {len(invalid_foods)} invalid foods that didn't match schema")
+    if invalid_count > 0:
+        logger.warning(f"Marked {invalid_count} invalid foods (missing or invalid fields)")
 
     # Save to disk
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -153,11 +154,13 @@ def fetch_and_save_food_data(client, start_date: date, end_date: date) -> str:
                 "end_date": end_date.isoformat(),
                 "fetched_at": datetime.now().isoformat(),
                 "food_count": len(foods_list),
+                "valid_count": valid_count,
+                "invalid_count": invalid_count,
             },
             "foods": foods_list
         }, f, indent=2)
 
-    logger.info(f"Saved {len(foods_list)} valid foods to {filepath}")
+    logger.info(f"Saved {len(foods_list)} foods ({valid_count} valid, {invalid_count} invalid) to {filepath}")
     return str(filepath)
 
 

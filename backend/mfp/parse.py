@@ -130,6 +130,11 @@ def parse_and_deduplicate(raw_files: dict) -> list[dict]:
                 logger.debug("Skipping food without name")
                 continue
 
+            # Skip foods marked as invalid during fetch
+            if food.get("valid") is False:
+                logger.debug(f"Skipping invalid food from fetch: {name}")
+                continue
+
             # Store only first occurrence of each food (by name)
             if name not in foods_map:
                 # Convert raw measurement to standardized grams
