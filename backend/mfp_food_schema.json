@@ -85,6 +85,19 @@
       "description": "Potassium in milligrams",
       "minimum": 0,
       "maximum": 1000000
+    },
+    "download_url": {
+      "type": ["string", "null"],
+      "description": "MyFitnessPal download URL for this food"
+    },
+    "measurement_unit_url": {
+      "type": ["string", "null"],
+      "description": "MyFitnessPal URL for the measurement unit"
+    },
+    "raw": {
+      "type": ["object", "null"],
+      "description": "Raw MFP entry data (unprocessed)",
+      "additionalProperties": true
     }
   },
   "required": ["name", "measurement", "calories", "protein", "carbohydrates", "fat", "fiber", "sugar", "sodium", "cholesterol", "saturated_fat", "potassium"],

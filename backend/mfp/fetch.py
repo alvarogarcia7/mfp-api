@@ -24,6 +24,7 @@ from jsonschema import validate, ValidationError
 
 from ..mfp_auth import login_mfp_password, login_mfp_cookie
 from ..vendor import mfp_client
+from . import unit_cache
 
 # Configure logging
 logging.basicConfig(
@@ -82,6 +83,7 @@ def fetch_and_save_food_data(client, start_date: date, end_date: date) -> str:
     logger.info(f"Fetching food data from {start_date} to {end_date}")
 
     all_foods = {}  # {name -> food_data}
+    units_cache = unit_cache.UnitMeasurementsCache()
 
     current = start_date
     while current <= end_date:
@@ -95,12 +97,26 @@ def fetch_and_save_food_data(client, start_date: date, end_date: date) -> str:
 
                     # Store first occurrence of each food (by name)
                     if name not in all_foods:
-                        # Get measurement: prefer "1 gram" format, fallback to quantity + unit
+                        # Get measurement and raw entry data
                         measurement = _get_measurement(entry)
+                        raw_data = _get_raw_entry_data(entry)
+
+                        # Track units in cache
+                        unit_name = measurement.get("unit")
+                        if unit_name and unit_name not in units_cache.units:
+                            unit_info = {
+                                "unit_name": unit_name,
+                                "measurement_unit_url": raw_data.get("measurement_unit_url"),
+                                "first_seen": datetime.now().isoformat(),
+                            }
+                            units_cache.add_unit(unit_name, unit_info)
 
                         all_foods[name] = {
                             "name": name,
                             "measurement": measurement,
+                            "download_url": raw_data.get("download_url"),
+                            "measurement_unit_url": raw_data.get("measurement_unit_url"),
+                            "raw": raw_data,
                             "calories": _safe_float(entry.totals.get("calories")),
                             "protein": _safe_float(entry.totals.get("protein")),
                             "carbs": _safe_float(entry.totals.get("carbohydrates")),
@@ -117,6 +133,9 @@ def fetch_and_save_food_data(client, start_date: date, end_date: date) -> str:
             logger.warning(f"Error fetching diary for {current}: {e}")
 
         current += timedelta(days=1)
+
+    # Save units cache
+    units_cache.save()
 
     logger.info(f"Extracted {len(all_foods)} unique foods from {start_date} to {end_date}")
 
@@ -209,6 +228,45 @@ def _get_measurement(entry) -> dict:
             "unit": None,
             "value": None
         }
+
+
+def _get_raw_entry_data(entry) -> dict:
+    """Extract raw entry data and URLs from MFP entry object.
+
+    Args:
+        entry: MyFitnessPal Entry object
+
+    Returns:
+        Dict with raw JSON and URLs
+    """
+    try:
+        # Extract URLs
+        download_url = getattr(entry, "url", None)
+        measurement_unit_url = None
+
+        # Try to get measurement unit object and its URL
+        unit_obj = getattr(entry, "unit_obj", None)
+        if unit_obj and hasattr(unit_obj, "url"):
+            measurement_unit_url = unit_obj.url
+
+        # Store raw entry attributes as available
+        raw_data = {
+            "name": getattr(entry, "name", None),
+            "quantity": getattr(entry, "quantity", None),
+            "unit": getattr(entry, "unit", None),
+            "download_url": download_url,
+            "measurement_unit_url": measurement_unit_url,
+        }
+
+        # Store totals as raw data
+        totals = getattr(entry, "totals", {})
+        if totals:
+            raw_data["totals"] = dict(totals) if hasattr(totals, "__iter__") else totals
+
+        return raw_data
+    except Exception as e:
+        logger.debug(f"Failed to extract raw entry data: {e}")
+        return {}
 
 
 def main():
