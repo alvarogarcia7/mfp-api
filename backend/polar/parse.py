@@ -14,6 +14,7 @@ Usage:
 import argparse
 import json
 import logging
+import re
 import sys
 from pathlib import Path
 from datetime import datetime
@@ -31,6 +32,39 @@ RAW_DATA_DIR = BACKEND_DIR.parent / "data" / "raw_polar_data"
 EXERCISE_DB_FILE = BACKEND_DIR / ".exercise_cache.json"
 BACKUP_DIR = BACKEND_DIR / ".backups"
 BACKUP_DIR.mkdir(exist_ok=True)
+
+# Sport icon mapping (iconHash -> sport name)
+SPORT_ICON_MAPPING = {
+    "d1ce94078aec226be28f6c602e6803e1": "WALKING",
+    "6c1d9d5f3859ced6896920bd8ebf1ddc": "RUNNING",
+    "5998fe5af79d3aecf3ef44e921069b2c": "CYCLING",
+    "2eb2f625905f8d9cd1f724de8fa01f14": "STRENGTH_TRAINING",
+    "d039f159dd0b62dc0a1ca72d82af2f0b": "OTHER",
+    "1b29ee703b12f73b609566861a9beaa9": "OTHER",
+}
+
+
+def extract_sport_from_icon_url(icon_url: str) -> str:
+    """Extract sport type from Polar Flow icon URL hash.
+
+    Args:
+        icon_url: Icon URL from calendar event
+
+    Returns:
+        Sport name or "EXERCISE" if not found
+    """
+    if not icon_url:
+        return "EXERCISE"
+
+    # Extract hash from URL: https://platform.cdn.polar.com/ecosystem/sport/icon/{HASH}-2024-04-16_06_01_XX
+    # The HASH part is 32 hex characters, followed by a dash and date
+    match = re.search(r'icon/([a-f0-9]{32})', icon_url)
+    if match:
+        icon_hash = match.group(1)
+        # Map hash to sport name
+        return SPORT_ICON_MAPPING.get(icon_hash, "EXERCISE")
+
+    return "EXERCISE"
 
 
 def load_raw_polar_files(specific_file: str | None = None) -> dict[str, dict]:
@@ -135,12 +169,19 @@ def parse_event(event: dict) -> dict | None:
     try:
         # Extract event fields from Polar API response
         event_id = event.get("listItemId") or event.get("id")
-        # Use sport name if available, otherwise fall back to type
-        sport_info = event.get("sport")
-        if isinstance(sport_info, dict):
-            event_type = sport_info.get("name", event.get("type", "Unknown"))
-        else:
-            event_type = sport_info or event.get("type") or event.get("eventType", "Unknown")
+
+        # Get sport type from icon URL hash (most reliable method)
+        icon_url = event.get("iconUrl", "")
+        event_type = extract_sport_from_icon_url(icon_url)
+
+        # Fallback to API sport field if available
+        if event_type == "EXERCISE":
+            sport_info = event.get("sport")
+            if isinstance(sport_info, dict):
+                event_type = sport_info.get("name", "Unknown")
+            elif sport_info:
+                event_type = sport_info
+
         duration_ms = event.get("duration", 0)  # In milliseconds
         calories = event.get("calories", 0)
         datetime_str = event.get("datetime", "")  # Format: "2026-08-20T21:09:52.237Z"
@@ -173,6 +214,7 @@ def parse_event(event: dict) -> dict | None:
             "start_time": datetime_str,
             "name": f"Polar Flow - {event_type}",
             "title": title,
+            "icon_url": icon_url,
         }
 
         # Add optional fields
