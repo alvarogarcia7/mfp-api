@@ -51,6 +51,9 @@ htmlcov/
 session_*
 backend/data/
 backend/**/.backups/
+backend/**/*_cache.json
+backend/.food_cache.json
+backend/polar/.exercise_cache.json
 
 # uv
 .uv/

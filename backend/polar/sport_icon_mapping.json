@@ -1,0 +1,38 @@
+{
+  "d1ce94078aec226be28f6c602e6803e1": {
+    "sport_id": 3,
+    "sport_name": "WALKING",
+    "confidence": "high",
+    "reasoning": "27 exercises, ~23min, no distance, very low intensity"
+  },
+  "6c1d9d5f3859ced6896920bd8ebf1ddc": {
+    "sport_id": 1,
+    "sport_name": "RUNNING",
+    "confidence": "medium",
+    "reasoning": "25 exercises, ~128min, high calories, high intensity"
+  },
+  "5998fe5af79d3aecf3ef44e921069b2c": {
+    "sport_id": 2,
+    "sport_name": "CYCLING",
+    "confidence": "medium",
+    "reasoning": "13 exercises, with distance data"
+  },
+  "2eb2f625905f8d9cd1f724de8fa01f14": {
+    "sport_id": 15,
+    "sport_name": "STRENGTH_TRAINING",
+    "confidence": "medium",
+    "reasoning": "8 exercises, ~46min, 534kcal, no distance, medium intensity"
+  },
+  "d039f159dd0b62dc0a1ca72d82af2f0b": {
+    "sport_id": null,
+    "sport_name": "UNKNOWN",
+    "confidence": "low",
+    "reasoning": "12 exercises, very short (~3min), possible data errors"
+  },
+  "1b29ee703b12f73b609566861a9beaa9": {
+    "sport_id": null,
+    "sport_name": "UNKNOWN",
+    "confidence": "low",
+    "reasoning": "6 exercises, ~21min, light activity"
+  }
+}
