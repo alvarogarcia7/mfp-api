@@ -35,7 +35,7 @@ RAW_DATA_DIR = Path(__file__).parent.parent / "data" / "raw_diary_data"
 RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 
-def fetch_and_save_daily_diary(client: mfp_client.MFPClient, start_date: date, end_date: date) -> str:
+def fetch_and_save_daily_diary(client: mfp_client.CurlCffiClient, start_date: date, end_date: date) -> str:
     """Fetch daily diary entries and save to disk.
 
     Fetches complete daily food diary including all meals and food entries.
@@ -161,18 +161,34 @@ def main():
 
     # Authenticate
     try:
-        if cookie:
+        if username and password:
+            logger.info(f"Authenticating with username: {username}")
+            cookies, mfp_username = login_mfp_password(username, password)
+            logger.info(f"✅ Authenticated as {mfp_username}")
+        elif cookie:
             logger.info("Authenticating with session cookie")
-            client = login_mfp_cookie(cookie)
-        elif username and password:
-            logger.info(f"Authenticating as {username}")
-            client = login_mfp_password(username, password)
+            # For cookie auth, we need the username - check .env.local first
+            mfp_username = os.getenv("MFP_USERNAME", "").strip()
+            if not mfp_username:
+                mfp_username = input("Enter MFP username for cookie auth: ").strip()
+            if not mfp_username:
+                logger.error("Username is required for cookie authentication")
+                sys.exit(1)
+            cookies, mfp_username = login_mfp_cookie(cookie, mfp_username)
+            logger.info(f"✅ Authenticated as {mfp_username}")
         else:
             logger.error("❌ No credentials provided")
             logger.error("   Use --username/--password or --cookie, or set MFP_USERNAME/MFP_PASSWORD/MFP_COOKIE in .env.local")
             sys.exit(1)
     except Exception as e:
         logger.error(f"❌ Authentication failed: {e}")
+        sys.exit(1)
+
+    # Create client
+    try:
+        client = mfp_client.build_client(cookies, username=mfp_username)
+    except Exception as e:
+        logger.error(f"❌ Failed to create MFP client: {e}")
         sys.exit(1)
 
     # Parse date range
