@@ -665,6 +665,9 @@ function setupLoginListeners() {
     const loginForm = document.getElementById("login-form");
     const cookieForm = document.getElementById("cookie-form");
 
+    // Skip if login forms don't exist (login tab removed)
+    if (!loginForm || !cookieForm) return;
+
     loginForm.addEventListener("submit", async (e) => {
         e.preventDefault();
         const username = document.getElementById("username").value.trim();
@@ -724,6 +727,7 @@ function setupLoginListeners() {
 
 function showLoginStatus(message, type) {
     const status = document.getElementById("login-status");
+    if (!status) return; // Element doesn't exist (login tab removed)
     status.textContent = message;
     status.className = `login-status ${type}`;
 }
