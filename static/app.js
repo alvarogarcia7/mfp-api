@@ -69,8 +69,8 @@ document.addEventListener("DOMContentLoaded", () => {
         switchTab(hash);
     });
 
-    // Load initial tab from URL or default
-    const initialTab = window.location.hash.slice(1) || "food-instances";
+    // Load initial tab from URL or default to food-entries
+    const initialTab = window.location.hash.slice(1) || "food-entries";
     switchTab(initialTab);
 
     // Login-related event listeners
