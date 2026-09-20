@@ -54,9 +54,11 @@ UNIT_ALIASES = {
     "ounces": "oz",
     "pounds": "lb",
     "grams": "g",
+    "gram(s)": "g",
     "milliliters": "ml",
     "ml.": "ml",
     "fl oz": "fl oz",
+    "fl": "fl oz",
     "fl. oz": "fl oz",
     "fluid ounces": "fl oz",
 }
