@@ -34,6 +34,56 @@ logger = logging.getLogger(__name__)
 RAW_DATA_DIR = Path(__file__).parent.parent / "data" / "raw_diary_data"
 RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
+# Debug directory for raw responses
+DEBUG_DIR = Path(__file__).parent.parent / "data" / "debug_diary_responses"
+DEBUG_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def save_debug_response(diary, current_date: date) -> None:
+    """Save raw diary response to debug file (never overwrites).
+
+    Args:
+        diary: Raw diary object from MFP API
+        current_date: Date of the diary entry
+    """
+    try:
+        # Convert diary object to dict for JSON serialization
+        diary_dict = {
+            "date": current_date.isoformat(),
+            "type": str(type(diary).__name__),
+            "meals": [],
+            "totals": diary.totals if diary.totals else None,
+        }
+
+        if hasattr(diary, "meals"):
+            for meal in diary.meals:
+                meal_dict = {
+                    "name": getattr(meal, "name", ""),
+                    "type": str(type(meal).__name__),
+                    "entries": [],
+                }
+                if hasattr(meal, "entries"):
+                    for entry in meal.entries:
+                        entry_dict = {
+                            "name": getattr(entry, "name", ""),
+                            "quantity": getattr(entry, "quantity", None),
+                            "unit": getattr(entry, "unit", ""),
+                            "totals": getattr(entry, "totals", None),
+                        }
+                        meal_dict["entries"].append(entry_dict)
+                diary_dict["meals"].append(meal_dict)
+
+        # Save with timestamp to avoid overwrites
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        debug_file = DEBUG_DIR / f"diary_{current_date.isoformat()}_{timestamp}.json"
+
+        with open(debug_file, 'w') as f:
+            json.dump(diary_dict, f, indent=2, default=str)
+
+        logger.debug(f"Saved debug response to {debug_file}")
+    except Exception as e:
+        logger.debug(f"Failed to save debug response: {e}")
+
 
 def fetch_and_save_daily_diary(client: mfp_client.CurlCffiClient, start_date: date, end_date: date) -> str:
     """Fetch daily diary entries and save to disk.
@@ -59,6 +109,10 @@ def fetch_and_save_daily_diary(client: mfp_client.CurlCffiClient, start_date: da
 
             # Fetch daily diary for this date
             diary = client.get_date(current_date)
+
+            # Save raw response for debugging
+            if diary:
+                save_debug_response(diary, current_date)
 
             if diary:
                 # Extract meals from diary
