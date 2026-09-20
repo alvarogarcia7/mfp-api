@@ -207,7 +207,7 @@ async def add_food_entry(request: dict = Body(...)):
             "calories": _safe_float(calories),
             "quantity": _safe_float(quantity),
             "timestamp": date.today().isoformat(),
-            "synced": False
+            "replicatedToMFP": False
         }
 
         if meal not in _food_entries[date_str]:

@@ -1,4 +1,4 @@
-.PHONY: help install install-prod run run-prod test test-cov typecheck clean lint format dev-setup mfp-download mfp-parse mfp-diary-download mfp-diary-parse mfp-goals-download mfp-goals-parse polar-download polar-parse pre-commit-install
+.PHONY: help install install-prod run run-prod test test-cov typecheck clean lint format dev-setup mfp-download mfp-parse mfp-diary-download mfp-diary-parse mfp-goals-download mfp-goals-parse mfp-entries-sync polar-download polar-parse pre-commit-install
 
 ## Show help for all targets
 help:
@@ -24,6 +24,8 @@ help:
 	@echo "  make mfp-diary-parse    - Parse MyFitnessPal diary into cache"
 	@echo "  make mfp-goals-download - Download MyFitnessPal user goals (kcal, macros)"
 	@echo "  make mfp-goals-parse    - Parse MyFitnessPal goals into user profile"
+	@echo "  make mfp-entries-sync   - Sync local food entries to MyFitnessPal"
+	@echo "  make mfp-entries-dry    - Preview entries to sync (dry-run)"
 	@echo "  make polar-download     - Download Polar Flow data (since last entry)"
 	@echo "  make polar-parse        - Parse Polar Flow raw data into cache"
 	@echo ""
@@ -178,6 +180,26 @@ mfp-goals-download:
 mfp-goals-parse:
 	@echo "Parsing MyFitnessPal user goals..."
 	uv run python -m backend.mfp.parse_goals
+
+## Sync local food entries to MyFitnessPal
+mfp-entries-sync:
+	@if [ ! -f .env.local ]; then \
+		echo "Error: .env.local not found"; \
+		echo "Copy .env.local.example to .env.local and add your credentials"; \
+		exit 1; \
+	fi
+	@echo "Syncing local food entries to MyFitnessPal..."
+	uv run python -m backend.mfp.upsert_entries
+
+## Preview food entries to sync (dry-run)
+mfp-entries-dry:
+	@if [ ! -f .env.local ]; then \
+		echo "Error: .env.local not found"; \
+		echo "Copy .env.local.example to .env.local and add your credentials"; \
+		exit 1; \
+	fi
+	@echo "Previewing local food entries (dry-run)..."
+	uv run python -m backend.mfp.upsert_entries --dry-run
 
 ## Download Polar Flow data (incremental from last entry)
 polar-download:
