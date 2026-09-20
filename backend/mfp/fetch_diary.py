@@ -236,7 +236,7 @@ def main():
     # Get credentials
     username = args.username or os.getenv("MFP_USERNAME")
     password = args.password or os.getenv("MFP_PASSWORD")
-    cookie = args.cookie or os.getenv("MFP_COOKIE")
+    cookie = args.cookie or os.getenv("MFP_SESSION_COOKIE")
 
     # Authenticate
     try:
@@ -257,7 +257,7 @@ def main():
             logger.info(f"✅ Authenticated as {mfp_username}")
         else:
             logger.error("❌ No credentials provided")
-            logger.error("   Use --username/--password or --cookie, or set MFP_USERNAME/MFP_PASSWORD/MFP_COOKIE in .env.local")
+            logger.error("   Use --username/--password or --cookie, or set MFP_USERNAME/MFP_PASSWORD/MFP_SESSION_COOKIE in .env.local")
             sys.exit(1)
     except Exception as e:
         logger.error(f"❌ Authentication failed: {e}")

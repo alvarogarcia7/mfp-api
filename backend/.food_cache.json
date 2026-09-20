@@ -1,0 +1,308 @@
+[
+  {
+    "name": "Orange juice, 150 gram",
+    "measurement": {
+      "unit": "g",
+      "value": 150.0
+    },
+    "calories": 72.0,
+    "protein": 1.0,
+    "carbs": 0,
+    "fat": 0.0,
+    "fiber": 0.0,
+    "sugar": 12.0,
+    "sodium": 3.0,
+    "cholesterol": 0.0,
+    "saturated_fat": 0.0,
+    "potassium": 0.0
+  },
+  {
+    "name": "Samoon, 1 roll",
+    "measurement": {
+      "unit": "g",
+      "value": 1.0
+    },
+    "calories": 115.0,
+    "protein": 4.0,
+    "carbs": 0,
+    "fat": 2.0,
+    "fiber": 0.0,
+    "sugar": 0.0,
+    "sodium": 0.0,
+    "cholesterol": 0.0,
+    "saturated_fat": 0.0,
+    "potassium": 0.0
+  },
+  {
+    "name": "Hellmann's - Mayonnaise, 1 tbsp",
+    "measurement": {
+      "unit": "g",
+      "value": 1.0
+    },
+    "calories": 90.0,
+    "protein": 0.0,
+    "carbs": 0,
+    "fat": 10.0,
+    "fiber": 0.0,
+    "sugar": 0.0,
+    "sodium": 90.0,
+    "cholesterol": 0.0,
+    "saturated_fat": 0.0,
+    "potassium": 0.0
+  },
+  {
+    "name": "Ground Meat, Cooked, 0.5 patty",
+    "measurement": {
+      "unit": "g",
+      "value": 0.5
+    },
+    "calories": 111.0,
+    "protein": 11.0,
+    "carbs": 0,
+    "fat": 7.0,
+    "fiber": 0.0,
+    "sugar": 0.0,
+    "sodium": 162.0,
+    "cholesterol": 0.0,
+    "saturated_fat": 0.0,
+    "potassium": 0.0
+  },
+  {
+    "name": "Farm Boy - Falafel Slider - Mini Burger, 1 slider",
+    "measurement": {
+      "unit": "g",
+      "value": 1.0
+    },
+    "calories": 160.0,
+    "protein": 6.0,
+    "carbs": 0,
+    "fat": 9.0,
+    "fiber": 0.0,
+    "sugar": 3.0,
+    "sodium": 290.0,
+    "cholesterol": 0.0,
+    "saturated_fat": 0.0,
+    "potassium": 0.0
+  },
+  {
+    "name": "Shawarma - Chicken Shawarma, 0.3 wrap",
+    "measurement": {
+      "unit": "g",
+      "value": 0.3
+    },
+    "calories": 129.0,
+    "protein": 12.0,
+    "carbs": 0,
+    "fat": 3.0,
+    "fiber": 0.0,
+    "sugar": 1.0,
+    "sodium": 150.0,
+    "cholesterol": 0.0,
+    "saturated_fat": 0.0,
+    "potassium": 0.0
+  },
+  {
+    "name": "coffee, black 12oz - coffee, black 12oz, 12 fl oz",
+    "measurement": {
+      "unit": "g",
+      "value": 12.0
+    },
+    "calories": 0.0,
+    "protein": 0.0,
+    "carbs": 0,
+    "fat": 0.0,
+    "fiber": 0.0,
+    "sugar": 0.0,
+    "sodium": 0.0,
+    "cholesterol": 0.0,
+    "saturated_fat": 0.0,
+    "potassium": 0.0
+  },
+  {
+    "name": "Ah - Oats\u00a0mango, 74.0 g",
+    "measurement": {
+      "unit": "g",
+      "value": 74.0
+    },
+    "calories": 64.0,
+    "protein": 2.0,
+    "carbs": 0,
+    "fat": 2.0,
+    "fiber": 0.0,
+    "sugar": 5.0,
+    "sodium": 0.0,
+    "cholesterol": 0.0,
+    "saturated_fat": 0.0,
+    "potassium": 0.0
+  },
+  {
+    "name": "Kofta, 80 gram(s)",
+    "measurement": {
+      "unit": "g",
+      "value": 80.0
+    },
+    "calories": 195.0,
+    "protein": 16.0,
+    "carbs": 0,
+    "fat": 13.0,
+    "fiber": 0.0,
+    "sugar": 0.0,
+    "sodium": 537.0,
+    "cholesterol": 0.0,
+    "saturated_fat": 0.0,
+    "potassium": 0.0
+  },
+  {
+    "name": "Salmon A La Plancha - Salmon, 126 g",
+    "measurement": {
+      "unit": "g",
+      "value": 126.0
+    },
+    "calories": 193.0,
+    "protein": 28.0,
+    "carbs": 0,
+    "fat": 9.0,
+    "fiber": 0.0,
+    "sugar": 0.0,
+    "sodium": 57.0,
+    "cholesterol": 0.0,
+    "saturated_fat": 0.0,
+    "potassium": 0.0
+  },
+  {
+    "name": "Tortellini, meat filled, 185 g",
+    "measurement": {
+      "unit": "g",
+      "value": 185.0
+    },
+    "calories": 353.0,
+    "protein": 22.0,
+    "carbs": 0,
+    "fat": 14.0,
+    "fiber": 0.0,
+    "sugar": 0.0,
+    "sodium": 807.0,
+    "cholesterol": 0.0,
+    "saturated_fat": 0.0,
+    "potassium": 0.0
+  },
+  {
+    "name": "Murphy's Deli - Lettuce, Tomato, & Onion, 2 serving",
+    "measurement": {
+      "unit": "g",
+      "value": 2.0
+    },
+    "calories": 30.0,
+    "protein": 2.0,
+    "carbs": 0,
+    "fat": 0.0,
+    "fiber": 0.0,
+    "sugar": 0.0,
+    "sodium": 10.0,
+    "cholesterol": 0.0,
+    "saturated_fat": 0.0,
+    "potassium": 0.0
+  },
+  {
+    "name": "Fruit Salad - Fruit, 2 bowl",
+    "measurement": {
+      "unit": "g",
+      "value": 2.0
+    },
+    "calories": 242.0,
+    "protein": 8.0,
+    "carbs": 0,
+    "fat": 4.0,
+    "fiber": 0.0,
+    "sugar": 73.0,
+    "sodium": 0.0,
+    "cholesterol": 0.0,
+    "saturated_fat": 0.0,
+    "potassium": 0.0
+  },
+  {
+    "name": "Milk Land - Milk, 400 ml",
+    "measurement": {
+      "unit": "g",
+      "value": 400.0
+    },
+    "calories": 284.0,
+    "protein": 14.0,
+    "carbs": 0,
+    "fat": 17.0,
+    "fiber": 0.0,
+    "sugar": 18.0,
+    "sodium": 164.0,
+    "cholesterol": 0.0,
+    "saturated_fat": 0.0,
+    "potassium": 0.0
+  },
+  {
+    "name": "Dairy Queen - Soft Serve Icecream (Plain), 103 g",
+    "measurement": {
+      "unit": "g",
+      "value": 103.0
+    },
+    "calories": 229.0,
+    "protein": 4.0,
+    "carbs": 0,
+    "fat": 5.0,
+    "fiber": 0.0,
+    "sugar": 20.0,
+    "sodium": 69.0,
+    "cholesterol": 0.0,
+    "saturated_fat": 0.0,
+    "potassium": 0.0
+  },
+  {
+    "name": "Casa Meatballs - Meatballs, Beef, 87 g",
+    "measurement": {
+      "unit": "g",
+      "value": 87.0
+    },
+    "calories": 244.0,
+    "protein": 13.0,
+    "carbs": 0,
+    "fat": 20.0,
+    "fiber": 0.0,
+    "sugar": 1.0,
+    "sodium": 557.0,
+    "cholesterol": 0.0,
+    "saturated_fat": 0.0,
+    "potassium": 0.0
+  },
+  {
+    "name": "Green Giant - Green Beans, 320 g",
+    "measurement": {
+      "unit": "g",
+      "value": 320.0
+    },
+    "calories": 94.0,
+    "protein": 8.0,
+    "carbs": 0,
+    "fat": 0.0,
+    "fiber": 0.0,
+    "sugar": 11.0,
+    "sodium": 19.0,
+    "cholesterol": 0.0,
+    "saturated_fat": 0.0,
+    "potassium": 0.0
+  },
+  {
+    "name": "Green Salad - Green Salad, 389 g",
+    "measurement": {
+      "unit": "g",
+      "value": 389.0
+    },
+    "calories": 89.0,
+    "protein": 8.0,
+    "carbs": 0,
+    "fat": 0.0,
+    "fiber": 0.0,
+    "sugar": 0.0,
+    "sodium": 0.0,
+    "cholesterol": 0.0,
+    "saturated_fat": 0.0,
+    "potassium": 0.0
+  }
+]
