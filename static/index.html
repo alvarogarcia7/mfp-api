@@ -252,12 +252,44 @@
 
                 <!-- Polar Flow Tab -->
                 <div id="polar-flow-tab" class="tab-content">
-                    <h2>Polar Flow Exercises</h2>
-                    <p class="tab-description">View and sync cardio activities from Polar Flow</p>
+                    <h2>Polar Flow Activities</h2>
+                    <p class="tab-description">View all cardio activities from Polar Flow</p>
 
-                    <!-- Exercises for Selected Date -->
+                    <!-- Activity Overview -->
+                    <div id="activity-overview" class="activity-overview">
+                        <h3>Overview</h3>
+                        <div id="overview-stats" class="overview-stats">
+                            <div class="stat-box">
+                                <div class="stat-value" id="total-activities">0</div>
+                                <div class="stat-label">Total Activities</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-value" id="total-calories-burned">0</div>
+                                <div class="stat-label">Calories Burned</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-value" id="total-duration">0h</div>
+                                <div class="stat-label">Total Duration</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-value" id="total-distance">0 km</div>
+                                <div class="stat-label">Total Distance</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Time Period Selector -->
+                    <div id="time-period-selector" class="time-period-selector">
+                        <label>View:</label>
+                        <button id="period-day" class="period-btn" data-period="day">Today</button>
+                        <button id="period-week" class="period-btn active" data-period="week">This Week</button>
+                        <button id="period-month" class="period-btn" data-period="month">This Month</button>
+                        <button id="period-all" class="period-btn" data-period="all">All Time</button>
+                    </div>
+
+                    <!-- All Exercises List -->
                     <div id="exercises-for-date" class="exercises-section">
-                        <h3>Exercises for <span id="exercises-date-label"></span></h3>
+                        <h3 id="exercises-title">All Exercises</h3>
                         <div id="exercises-list" class="exercises-list">
                             <div class="loading">Loading exercises...</div>
                         </div>

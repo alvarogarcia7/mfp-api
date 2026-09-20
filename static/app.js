@@ -39,6 +39,8 @@ let currentFoodView = "table";  // "table" or "cards"
 let filteredFoodDatabase = [];
 let lastCheckedCheckbox = null;  // For shift+click range selection
 let exercisesForDate = [];  // Exercises for the selected date
+let allExercises = [];  // All exercises from database
+let currentPeriod = "week";  // Current time period filter
 
 // Modal elements
 const loadMoreFoodsBtn = document.getElementById("load-more-foods-btn");
@@ -118,6 +120,24 @@ document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll("[data-subtab]").forEach(btn => {
         btn.addEventListener("click", () => switchLoginTab(btn.dataset.subtab));
     });
+
+    // Time period selectors for Polar Flow
+    document.querySelectorAll(".period-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            document.querySelectorAll(".period-btn").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            currentPeriod = btn.dataset.period;
+            filterAndDisplayExercises();
+        });
+    });
+
+    // Load all exercises when tab is viewed
+    const tabNavBtn = Array.from(tabNavBtns).find(btn => btn.dataset.tab === "polar-flow");
+    if (tabNavBtn) {
+        tabNavBtn.addEventListener("click", () => {
+            loadAllExercises();
+        });
+    }
 
     // Polar Flow event listeners
     const polarStartDate = document.getElementById("polar-start-date");
@@ -513,19 +533,132 @@ function updateCalorieSummary(diaryData) {
     caloriesSummary.style.display = "block";
 }
 
+async function loadAllExercises() {
+    try {
+        const response = await fetch("/api/exercises");
+        const data = await response.json();
+        allExercises = data.exercises || [];
+        filterAndDisplayExercises();
+        return allExercises;
+    } catch (err) {
+        console.warn("Could not load all exercises:", err);
+        allExercises = [];
+        return [];
+    }
+}
+
 async function loadExercisesForDate(dateStr) {
     try {
         const response = await fetch(`/api/exercises?date_str=${dateStr}`);
         const data = await response.json();
         exercisesForDate = data.exercises || [];
-        displayExercises(dateStr);
         return exercisesForDate;
     } catch (err) {
         console.warn("Could not load exercises:", err);
         exercisesForDate = [];
-        displayExercises(dateStr);
         return [];
     }
+}
+
+function getDateRangeForPeriod() {
+    const today = new Date();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay());
+
+    switch (currentPeriod) {
+        case "day":
+            return {
+                start: new Date(today.getFullYear(), today.getMonth(), today.getDate()),
+                end: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1)
+            };
+        case "week":
+            return {
+                start: startOfWeek,
+                end: new Date(startOfWeek.getTime() + 7 * 24 * 60 * 60 * 1000)
+            };
+        case "month":
+            return {
+                start: new Date(today.getFullYear(), today.getMonth(), 1),
+                end: new Date(today.getFullYear(), today.getMonth() + 1, 1)
+            };
+        case "all":
+            return {
+                start: new Date(2000, 0, 1),
+                end: new Date(2100, 11, 31)
+            };
+        default:
+            return { start: new Date(), end: new Date() };
+    }
+}
+
+function filterAndDisplayExercises() {
+    const range = getDateRangeForPeriod();
+    const filtered = allExercises.filter(exercise => {
+        if (!exercise.date) return false;
+        try {
+            const exDate = new Date(exercise.date);
+            return exDate >= range.start && exDate <= range.end;
+        } catch {
+            return false;
+        }
+    });
+
+    displayAllExercises(filtered);
+    updateOverviewStats(filtered);
+}
+
+function updateOverviewStats(exercises) {
+    const totalActivities = exercises.length;
+    const totalCalories = exercises.reduce((sum, ex) => sum + (ex.calories || 0), 0);
+    const totalMinutes = exercises.reduce((sum, ex) => sum + (ex.duration || 0), 0);
+    const totalDistance = exercises.reduce((sum, ex) => sum + (ex.distance || 0), 0);
+
+    document.getElementById("total-activities").textContent = totalActivities;
+    document.getElementById("total-calories-burned").textContent = totalCalories;
+    document.getElementById("total-duration").textContent = (totalMinutes / 60).toFixed(1) + "h";
+    document.getElementById("total-distance").textContent = totalDistance.toFixed(1) + " km";
+
+    // Update title
+    const titleMap = {
+        day: "Today's Exercises",
+        week: "This Week's Exercises",
+        month: "This Month's Exercises",
+        all: "All Exercises"
+    };
+    document.getElementById("exercises-title").textContent = titleMap[currentPeriod] || "All Exercises";
+}
+
+function displayAllExercises(exercises) {
+    const exercisesList = document.getElementById("exercises-list");
+
+    if (!exercisesList) return;
+
+    if (exercises.length === 0) {
+        exercisesList.innerHTML = '<div class="no-data">No exercises found for this period</div>';
+        return;
+    }
+
+    let html = '<div class="exercises-items">';
+
+    exercises.forEach((exercise) => {
+        const date = exercise.date ? new Date(exercise.date) : null;
+        const dateStr = date ? date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : '';
+
+        html += `<div class="exercise-item">
+            <div class="exercise-header">
+                <div class="exercise-date">${dateStr}</div>
+                <div class="exercise-name">${exercise.name || 'Unknown Activity'}</div>
+            </div>
+            <div class="exercise-details">
+                ${exercise.duration ? `<span>⏱️ ${exercise.duration} min</span>` : ''}
+                ${exercise.distance ? `<span>📍 ${exercise.distance.toFixed(1)} km</span>` : ''}
+                ${exercise.calories ? `<span>🔥 ${exercise.calories} cal</span>` : ''}
+            </div>
+        </div>`;
+    });
+
+    html += '</div>';
+    exercisesList.innerHTML = html;
 }
 
 function displayExercises(dateStr) {
