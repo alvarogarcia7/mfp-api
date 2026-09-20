@@ -24,82 +24,72 @@ class TestHealthCheck:
         assert response.status_code in [200, 404]  # 200 if static files mounted, 404 if not
 
 
-class TestAuthEndpoints:
-    """Test authentication endpoints."""
+class TestOfflineFirstEndpoints:
+    """Test offline-first API endpoints (no authentication)."""
 
-    def test_login_missing_credentials(self):
-        """Test login with missing credentials."""
-        response = client.post("/api/login", json={})
+    def test_status_endpoint(self):
+        """Test /api/status endpoint."""
+        response = client.get("/api/status")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "ok"
+        assert data["mode"] == "offline-first"
+
+    def test_food_instances_endpoint(self):
+        """Test /api/food-instances endpoint."""
+        response = client.get("/api/food-instances")
+        assert response.status_code == 200
+        data = response.json()
+        assert "foods" in data
+        assert "count" in data
+
+    def test_food_entries_endpoint(self):
+        """Test /api/food-entries endpoint."""
+        response = client.get("/api/food-entries")
+        assert response.status_code == 200
+        data = response.json()
+        assert "date" in data
+        assert "meals" in data
+        assert "has_data" in data
+
+    def test_user_goals_endpoint(self):
+        """Test /api/user-goals endpoint."""
+        response = client.get("/api/user-goals")
+        assert response.status_code == 200
+        data = response.json()
+        assert "calories" in data
+        assert isinstance(data["calories"], (int, float))
+
+    def test_today_summary_endpoint(self):
+        """Test /api/today endpoint."""
+        response = client.get("/api/today")
+        assert response.status_code == 200
+        data = response.json()
+        assert "date" in data
+        assert "goal_calories" in data
+        assert "calories_eaten" in data
+
+    def test_add_food_entry_validation(self):
+        """Test /api/food-entries/add with missing data."""
+        response = client.post("/api/food-entries/add", json={})
         assert response.status_code == 400
         assert "Missing" in response.json()["detail"]
 
-    def test_login_invalid_credentials(self):
-        """Test login with invalid credentials."""
-        response = client.post(
-            "/api/login",
-            json={"username": "invalid", "password": "invalid"}
-        )
-        assert response.status_code == 401
-
-    def test_logout_missing_auth(self):
-        """Test logout without authentication."""
-        response = client.post("/api/logout")
-        assert response.status_code == 401
-
-
-class TestProtectedEndpoints:
-    """Test that protected endpoints require authentication."""
-
-    def test_today_missing_auth(self):
-        """Test /api/today without auth header."""
-        response = client.get("/api/today")
-        assert response.status_code == 401
-
-    def test_search_missing_auth(self):
-        """Test /api/search without auth header."""
-        response = client.post("/api/search", json={"query": "test"})
-        assert response.status_code == 401
-
-    def test_log_missing_auth(self):
-        """Test /api/log without auth header."""
-        response = client.post(
-            "/api/log",
-            json={"food_id": "123", "weight_id": "456", "quantity": 100}
-        )
-        assert response.status_code == 401
-
-    def test_invalid_session_id(self):
-        """Test with invalid session ID."""
-        response = client.get(
-            "/api/today",
-            headers={"Authorization": "Bearer invalid-session-uuid"}
-        )
-        assert response.status_code == 401
-        assert "Session expired" in response.json()["detail"]
-
-
-class TestInputValidation:
-    """Test input validation."""
-
-    def test_login_missing_username(self):
-        """Test login with missing username."""
-        response = client.post("/api/login", json={"password": "test"})
-        assert response.status_code == 400
-
-    def test_login_missing_password(self):
-        """Test login with missing password."""
-        response = client.post("/api/login", json={"username": "test"})
-        assert response.status_code == 400
-
-    def test_search_missing_query(self):
-        """Test search with missing query."""
-        response = client.post(
-            "/api/search",
-            json={},
-            headers={"Authorization": "Bearer valid-uuid"}
-        )
-        # Will fail auth first, but if auth passed, would need query
-        assert response.status_code in [401, 400]
+    def test_add_valid_food_entry(self):
+        """Test /api/food-entries/add with valid data."""
+        payload = {
+            "date": "2026-09-20",
+            "meal": "lunch",
+            "name": "Test Food",
+            "calories": 100,
+            "quantity": 1.0
+        }
+        response = client.post("/api/food-entries/add", json=payload)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert "entry" in data
+        assert data["entry"]["name"] == "Test Food"
 
 
 class TestDocumentation:
