@@ -41,6 +41,7 @@ let lastCheckedCheckbox = null;  // For shift+click range selection
 let exercisesForDate = [];  // Exercises for the selected date
 let allExercises = [];  // All exercises from database
 let currentPeriod = "week";  // Current time period filter
+let customDateRange = null;  // Custom date range for exercises (if user selects dates)
 
 // Modal elements
 const loadMoreFoodsBtn = document.getElementById("load-more-foods-btn");
@@ -127,6 +128,46 @@ document.addEventListener("DOMContentLoaded", () => {
             document.querySelectorAll(".period-btn").forEach(b => b.classList.remove("active"));
             btn.classList.add("active");
             currentPeriod = btn.dataset.period;
+            customDateRange = null;  // Clear custom range when using preset buttons
+            filterAndDisplayExercises();
+        });
+    });
+
+    // Custom date range inputs for Polar Flow
+    const customStartDate = document.getElementById("custom-start-date");
+    const customEndDate = document.getElementById("custom-end-date");
+
+    if (customStartDate) {
+        customStartDate.addEventListener("change", applyCustomDateRange);
+    }
+
+    if (customEndDate) {
+        customEndDate.addEventListener("change", applyCustomDateRange);
+    }
+
+    // Quick range buttons for Polar Flow
+    document.querySelectorAll(".quick-range-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const days = parseInt(btn.dataset.days);
+            const endDate = new Date();
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - days);
+
+            if (customStartDate) customStartDate.valueAsDate = startDate;
+            if (customEndDate) customEndDate.valueAsDate = endDate;
+
+            customDateRange = {
+                start: startDate,
+                end: endDate
+            };
+
+            // Deactivate preset buttons
+            document.querySelectorAll(".period-btn").forEach(b => b.classList.remove("active"));
+
+            // Highlight this quick button
+            document.querySelectorAll(".quick-range-btn").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+
             filterAndDisplayExercises();
         });
     });
@@ -560,7 +601,35 @@ async function loadExercisesForDate(dateStr) {
     }
 }
 
+function applyCustomDateRange() {
+    const customStartDate = document.getElementById("custom-start-date");
+    const customEndDate = document.getElementById("custom-end-date");
+
+    if (customStartDate && customStartDate.value && customEndDate && customEndDate.value) {
+        const startDate = new Date(customStartDate.value);
+        const endDate = new Date(customEndDate.value);
+
+        if (startDate <= endDate) {
+            customDateRange = {
+                start: startDate,
+                end: new Date(endDate.getTime() + 24 * 60 * 60 * 1000)  // Include entire end date
+            };
+
+            // Deactivate all preset buttons and quick range buttons
+            document.querySelectorAll(".period-btn").forEach(b => b.classList.remove("active"));
+            document.querySelectorAll(".quick-range-btn").forEach(b => b.classList.remove("active"));
+
+            filterAndDisplayExercises();
+        }
+    }
+}
+
 function getDateRangeForPeriod() {
+    // If custom date range is set, use that
+    if (customDateRange) {
+        return customDateRange;
+    }
+
     const today = new Date();
     const startOfWeek = new Date(today);
     startOfWeek.setDate(today.getDate() - today.getDay());

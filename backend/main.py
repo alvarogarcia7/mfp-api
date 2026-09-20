@@ -47,7 +47,7 @@ _food_entries: dict = {}
 
 # Database file paths
 FOOD_DB_FILE = Path(__file__).parent / ".food_cache.json"
-EXERCISE_DB_FILE = Path(__file__).parent / ".exercise_cache.json"
+EXERCISE_DB_FILE = Path(__file__).parent / "polar" / ".exercise_cache.json"
 DIARY_DB_FILE = Path(__file__).parent / ".diary_cache.json"
 FOOD_ENTRIES_FILE = Path(__file__).parent / ".food_entries.json"
 USER_PROFILE_FILE = Path(__file__).parent / "data" / "user" / "profile.json"

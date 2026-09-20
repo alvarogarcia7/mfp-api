@@ -280,11 +280,34 @@
 
                     <!-- Time Period Selector -->
                     <div id="time-period-selector" class="time-period-selector">
-                        <label>View:</label>
-                        <button id="period-day" class="period-btn" data-period="day">Today</button>
-                        <button id="period-week" class="period-btn active" data-period="week">This Week</button>
-                        <button id="period-month" class="period-btn" data-period="month">This Month</button>
-                        <button id="period-all" class="period-btn" data-period="all">All Time</button>
+                        <div class="period-buttons">
+                            <label>View:</label>
+                            <button id="period-day" class="period-btn" data-period="day">Today</button>
+                            <button id="period-week" class="period-btn active" data-period="week">This Week</button>
+                            <button id="period-month" class="period-btn" data-period="month">This Month</button>
+                            <button id="period-all" class="period-btn" data-period="all">All Time</button>
+                        </div>
+
+                        <div class="period-custom-range">
+                            <div class="custom-date-inputs">
+                                <div class="date-input-wrapper">
+                                    <label for="custom-start-date">Start:</label>
+                                    <input type="date" id="custom-start-date" class="custom-date-input">
+                                </div>
+                                <div class="date-input-wrapper">
+                                    <label for="custom-end-date">End:</label>
+                                    <input type="date" id="custom-end-date" class="custom-date-input">
+                                </div>
+                            </div>
+
+                            <div class="quick-range-buttons">
+                                <label>Quick:</label>
+                                <button id="period-quick-1week" class="quick-range-btn" data-days="7">1 Week</button>
+                                <button id="period-quick-2weeks" class="quick-range-btn" data-days="14">2 Weeks</button>
+                                <button id="period-quick-1month" class="quick-range-btn" data-days="30">1 Month</button>
+                                <button id="period-quick-3months" class="quick-range-btn" data-days="90">3 Months</button>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- All Exercises List -->
