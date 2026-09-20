@@ -21,7 +21,6 @@ const selectAllBtn = document.getElementById("select-all-btn");
 const deselectAllBtn = document.getElementById("deselect-all-btn");
 const addAllBtn = document.getElementById("add-all-btn");
 const entryDate = document.getElementById("entry-date");
-const loadDateBtn = document.getElementById("load-date-btn");
 const caloriesSummary = document.getElementById("calorie-summary");
 
 // Date navigation buttons
@@ -85,7 +84,9 @@ document.addEventListener("DOMContentLoaded", () => {
     deselectAllBtn.addEventListener("click", deselectAllResults);
     addAllBtn.addEventListener("click", addAllSelected);
     logoutBtn.addEventListener("click", handleLogout);
-    loadDateBtn.addEventListener("click", loadFoodEntries);
+
+    // Auto-load when date changes
+    entryDate.addEventListener("change", loadFoodEntries);
 
     // Date navigation buttons
     if (datePrevWeekBtn) datePrevWeekBtn.addEventListener("click", () => changeDate(-7));

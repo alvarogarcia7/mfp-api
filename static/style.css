@@ -1104,14 +1104,22 @@ body {
 
 .date-selector input[type="date"] {
     flex: 1;
-    padding: 8px 12px;
+    padding: 10px 14px;
     border: 1px solid #ddd;
-    border-radius: 4px;
+    border-radius: 6px;
     font-size: 14px;
+    cursor: pointer;
+    transition: border-color 0.2s;
 }
 
-.date-selector .action-btn {
-    padding: 8px 16px;
+.date-selector input[type="date"]:hover {
+    border-color: #667eea;
+}
+
+.date-selector input[type="date"]:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 .date-nav-buttons {
