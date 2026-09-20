@@ -13,6 +13,7 @@ import argparse
 import json
 import logging
 import os
+import re
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -21,6 +22,11 @@ from dotenv import load_dotenv
 from ..mfp_auth import login_mfp_password, login_mfp_cookie
 from ..vendor import mfp_client
 from . import library
+
+try:
+    from bs4 import BeautifulSoup
+except ImportError:
+    BeautifulSoup = None
 
 # Configure logging
 logging.basicConfig(
@@ -34,10 +40,63 @@ RAW_DATA_DIR = Path(__file__).parent.parent / "data" / "raw_goals_data"
 RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 
+def _extract_goals_from_page(soup, username: str) -> dict:
+    """Extract nutrition goals from MyFitnessPal goals page HTML.
+
+    Args:
+        soup: BeautifulSoup object of the goals page
+        username: Username for error logging
+
+    Returns:
+        Dictionary with daily_goals, or empty dict if parsing fails
+    """
+    try:
+        goals = {}
+
+        # Look for goal values in the page - they're typically in spans or divs
+        # Pattern: find elements containing goal names and their values
+        text = soup.get_text()
+
+        # Try to extract numeric values for common macros
+        # Look for patterns like "Calories 1300" or similar
+        calorie_match = re.search(r'Calories?\s+(\d+)', text)
+        protein_match = re.search(r'Protein\s+(\d+)', text)
+        carbs_match = re.search(r'Carbohydrates?\s+(\d+)', text)
+        fat_match = re.search(r'Fat\s+(\d+)', text)
+        fiber_match = re.search(r'Fiber\s+(\d+)', text)
+        sodium_match = re.search(r'Sodium\s+(\d+)', text)
+        sugar_match = re.search(r'Sugar\s+(\d+)', text)
+
+        if calorie_match:
+            goals['calories'] = int(calorie_match.group(1))
+        if protein_match:
+            goals['protein'] = int(protein_match.group(1))
+        if carbs_match:
+            goals['carbohydrates'] = int(carbs_match.group(1))
+        if fat_match:
+            goals['fat'] = int(fat_match.group(1))
+        if fiber_match:
+            goals['fiber'] = int(fiber_match.group(1))
+        if sodium_match:
+            goals['sodium'] = int(sodium_match.group(1))
+        if sugar_match:
+            goals['sugar'] = int(sugar_match.group(1))
+
+        if goals:
+            return {
+                "username": username,
+                "daily_goals": goals
+            }
+    except Exception as e:
+        logger.debug(f"Could not parse goals from page: {e}")
+
+    return {}
+
+
 def fetch_and_save_user_goals(client: mfp_client.CurlCffiClient, username: str) -> str:
     """Fetch or create user goals and save to disk.
 
-    Attempts to fetch from API; falls back to defaults if unavailable.
+    Attempts to fetch from goals page; falls back to defaults if unavailable.
 
     Args:
         client: Authenticated MFP client
@@ -49,22 +108,29 @@ def fetch_and_save_user_goals(client: mfp_client.CurlCffiClient, username: str) 
     logger.info(f"Fetching user goals for {username}...")
 
     api_data = {}
-    # Try to fetch user goals via API endpoint
+    # Try to fetch user goals from the goals page
     try:
         response = client.session.get(
-            "https://www.myfitnesspal.com/api/user/user_profile",
-            headers={"Content-Type": "application/json"},
-            timeout=5
+            "https://www.myfitnesspal.com/account/my-goals",
+            timeout=10
         )
         if response.status_code == 200:
-            api_data = response.json()
-            logger.info(f"✅ Fetched user profile from API: {username}")
-        else:
-            logger.warning(f"API returned {response.status_code}, using default goals")
-    except Exception as e:
-        logger.warning(f"Could not fetch from API ({e}), using default goals")
+            if BeautifulSoup:
+                soup = BeautifulSoup(response.text, "html.parser")
+                api_data = _extract_goals_from_page(soup, username)
+            else:
+                logger.warning("BeautifulSoup not available, cannot parse goals page")
 
-    # If we got data from API, use it; otherwise use sensible defaults
+            if api_data:
+                logger.info(f"✅ Fetched user goals from goals page: {username}")
+            else:
+                logger.warning(f"Could not parse goals from page, using defaults")
+        else:
+            logger.warning(f"Goals page returned {response.status_code}, using defaults")
+    except Exception as e:
+        logger.warning(f"Could not fetch goals page ({e}), using defaults")
+
+    # If we got data from page, use it; otherwise use sensible defaults
     if not api_data:
         logger.info("Creating default goals profile (edit data/user/profile.json to customize)")
         api_data = {
