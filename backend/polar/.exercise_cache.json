@@ -406,5 +406,13 @@
     "title": "00:46:11;0.00 km",
     "icon_url": "https://platform.cdn.polar.com/ecosystem/sport/icon/6c1d9d5f3859ced6896920bd8ebf1ddc-2024-04-16_06_01_19",
     "distance": 0.0
+  },
+  {
+    "date": "2026-09-20",
+    "name": "Running",
+    "calories": 150,
+    "duration": 20,
+    "distance": 3.5,
+    "created_at": "2026-09-20T21:44:26.352650"
   }
 ]

@@ -180,6 +180,21 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // Quick exercise insert listeners
+    const kcalInput = document.getElementById("exercise-kcal");
+    const kcalMinus = document.getElementById("kcal-minus");
+    const kcalPlus = document.getElementById("kcal-plus");
+    const minutesInput = document.getElementById("exercise-minutes");
+    const minutesMinus = document.getElementById("minutes-minus");
+    const minutesPlus = document.getElementById("minutes-plus");
+    const exerciseAddBtn = document.getElementById("exercise-add-btn");
+
+    if (kcalMinus) kcalMinus.addEventListener("click", () => adjustValue(kcalInput, -50));
+    if (kcalPlus) kcalPlus.addEventListener("click", () => adjustValue(kcalInput, 50));
+    if (minutesMinus) minutesMinus.addEventListener("click", () => adjustValue(minutesInput, -1, 1));
+    if (minutesPlus) minutesPlus.addEventListener("click", () => adjustValue(minutesInput, 1, 1));
+    if (exerciseAddBtn) exerciseAddBtn.addEventListener("click", addQuickExercise);
+
     // Polar Flow event listeners
     const polarStartDate = document.getElementById("polar-start-date");
     const polarEndDate = document.getElementById("polar-end-date");
@@ -1167,6 +1182,90 @@ function escapeHtml(text) {
     const div = document.createElement("div");
     div.textContent = text;
     return div.innerHTML;
+}
+
+// ============================================================================
+// EXERCISE SPINNER UTILITIES
+// ============================================================================
+
+function adjustValue(input, delta, min = 0) {
+    let value = parseInt(input.value) || 0;
+    value += delta;
+    value = Math.max(value, min);
+    input.value = value;
+}
+
+async function addQuickExercise() {
+    const sportSelect = document.getElementById("exercise-sport");
+    const kcalInput = document.getElementById("exercise-kcal");
+    const minutesInput = document.getElementById("exercise-minutes");
+
+    const sport = sportSelect.value;
+    const kcal = parseInt(kcalInput.value) || 0;
+    const minutes = parseInt(minutesInput.value) || 1;
+
+    if (!sport) {
+        showNotification("Please select a sport", "warning");
+        return;
+    }
+
+    if (kcal <= 0) {
+        showNotification("Calories must be greater than 0", "warning");
+        return;
+    }
+
+    if (minutes <= 0) {
+        showNotification("Minutes must be greater than 0", "warning");
+        return;
+    }
+
+    try {
+        const exerciseAddBtn = document.getElementById("exercise-add-btn");
+        exerciseAddBtn.disabled = true;
+        exerciseAddBtn.textContent = "Adding...";
+
+        const today = new Date();
+        const dateStr = today.toISOString().split('T')[0];
+
+        const response = await fetch("/api/exercises/add", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                date: dateStr,
+                name: sport,
+                calories: kcal,
+                duration: minutes,
+                distance: 0
+            })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || "Failed to add exercise");
+        }
+
+        showNotification(`✅ ${sport} exercise added (${kcal} kcal, ${minutes} min)`, "success");
+
+        // Reset form
+        sportSelect.value = "";
+        kcalInput.value = "100";
+        minutesInput.value = "30";
+
+        // Reload exercises
+        await loadAllExercises();
+        await loadExercisesForDate(entryDate.value);
+        await updateCalorieSummary();
+
+    } catch (err) {
+        console.error("Error adding exercise:", err);
+        showNotification(`Error: ${err.message}`, "error");
+    } finally {
+        const exerciseAddBtn = document.getElementById("exercise-add-btn");
+        exerciseAddBtn.disabled = false;
+        exerciseAddBtn.textContent = "Add Exercise";
+    }
 }
 
 // ============================================================================

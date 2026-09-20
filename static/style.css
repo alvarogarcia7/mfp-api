@@ -1880,6 +1880,134 @@ body {
     border-color: #667eea;
 }
 
+/* Quick Exercise Insert */
+.quick-exercise-insert {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.quick-exercise-insert h3 {
+    margin: 0 0 15px 0;
+    color: #333;
+    font-size: 18px;
+}
+
+.exercise-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr auto;
+    gap: 16px;
+    align-items: flex-end;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-group label {
+    font-weight: 600;
+    color: #555;
+    font-size: 13px;
+}
+
+.exercise-sport-select {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+    color: #333;
+}
+
+.exercise-sport-select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+}
+
+.spinner-input {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: white;
+}
+
+.spinner-btn {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: #f5f5f5;
+    color: #555;
+    cursor: pointer;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    font-weight: bold;
+}
+
+.spinner-btn:hover {
+    background: #e8e8e8;
+    color: #333;
+}
+
+.spinner-btn.minus {
+    border-radius: 4px 0 0 4px;
+}
+
+.spinner-btn.plus {
+    border-radius: 0 4px 4px 0;
+}
+
+.exercise-kcal-input,
+.exercise-minutes-input {
+    flex: 1;
+    padding: 6px 8px;
+    border: none;
+    font-size: 14px;
+    text-align: center;
+    font-weight: 500;
+}
+
+.exercise-kcal-input:focus,
+.exercise-minutes-input:focus {
+    outline: none;
+}
+
+/* Remove number input spinner arrows */
+.exercise-kcal-input::-webkit-outer-spin-button,
+.exercise-kcal-input::-webkit-inner-spin-button,
+.exercise-minutes-input::-webkit-outer-spin-button,
+.exercise-minutes-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.exercise-kcal-input[type=number],
+.exercise-minutes-input[type=number] {
+    -moz-appearance: textfield;
+}
+
+@media (max-width: 1024px) {
+    .exercise-form {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .exercise-form {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* Exercises Section */
 .exercises-section {
     background: white;

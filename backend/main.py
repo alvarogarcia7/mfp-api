@@ -10,11 +10,12 @@ Architecture:
 
 import json
 import logging
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Annotated
 
 from fastapi import FastAPI, HTTPException, Header, Body
+from pydantic import BaseModel
 from fastapi.staticfiles import StaticFiles
 
 import sys
@@ -40,6 +41,19 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
+
+# ============================================================================
+# Pydantic Models
+# ============================================================================
+
+class ExerciseCreate(BaseModel):
+    """Exercise creation request model."""
+    date: str
+    name: str
+    calories: int
+    duration: int
+    distance: float = 0.0
+
 
 # In-memory food entries: {date -> {meal -> [foods]}}
 # Loaded from disk on startup
@@ -78,6 +92,17 @@ def _load_exercise_cache() -> list[dict] | None:
     except Exception as e:
         logger.error(f"Error loading exercise cache: {e}")
         return None
+
+
+def _save_exercise_cache(exercises: list[dict]) -> None:
+    """Save exercise database to JSON file."""
+    try:
+        # Ensure directory exists
+        EXERCISE_DB_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with open(EXERCISE_DB_FILE, 'w') as f:
+            json.dump(exercises, f, indent=2)
+    except Exception as e:
+        logger.error(f"Error saving exercise cache: {e}")
 
 
 def _safe_float(value) -> float:
@@ -400,6 +425,51 @@ async def get_exercises(date_str: str | None = None):
         return {"exercises": exercises, "count": len(exercises), "date": date_str}
 
     return {"exercises": exercise_cache, "count": len(exercise_cache)}
+
+
+@app.post("/api/exercises/add")
+async def add_exercise(exercise: ExerciseCreate):
+    """Add a quick exercise entry to the database."""
+    try:
+        # Validate inputs
+        if not exercise.date or not exercise.name:
+            raise HTTPException(status_code=400, detail="date and name are required")
+        if exercise.calories <= 0:
+            raise HTTPException(status_code=400, detail="calories must be positive")
+        if exercise.duration <= 0:
+            raise HTTPException(status_code=400, detail="duration must be positive")
+
+        # Load existing exercises
+        exercises = _load_exercise_cache() or []
+
+        # Create new exercise entry
+        new_exercise = {
+            "date": exercise.date,
+            "name": exercise.name,
+            "calories": exercise.calories,
+            "duration": exercise.duration,
+            "distance": exercise.distance,
+            "created_at": datetime.now().isoformat()
+        }
+
+        # Add to list
+        exercises.append(new_exercise)
+
+        # Save back to file
+        _save_exercise_cache(exercises)
+
+        logger.info(f"✅ Added exercise: {exercise.name} on {exercise.date} ({exercise.calories} kcal, {exercise.duration} min)")
+        return {
+            "status": "success",
+            "exercise": new_exercise,
+            "total_exercises": len(exercises)
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error adding exercise: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============================================================================

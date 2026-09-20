@@ -310,6 +310,44 @@
                         </div>
                     </div>
 
+                    <!-- Quick Exercise Insert -->
+                    <div class="quick-exercise-insert">
+                        <h3>🏃 Quick Add Exercise</h3>
+                        <div class="exercise-form">
+                            <div class="form-group">
+                                <label for="exercise-sport">Sport:</label>
+                                <select id="exercise-sport" class="exercise-sport-select">
+                                    <option value="">Select sport...</option>
+                                    <option value="HIIT">HIIT</option>
+                                    <option value="Padel">Padel</option>
+                                    <option value="Running">Running</option>
+                                    <option value="Lifting">Lifting</option>
+                                    <option value="Walking">Walking</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="exercise-kcal">Active kcal:</label>
+                                <div class="spinner-input">
+                                    <button class="spinner-btn minus" id="kcal-minus" type="button">−</button>
+                                    <input type="number" id="exercise-kcal" class="exercise-kcal-input" value="100" min="0" step="50">
+                                    <button class="spinner-btn plus" id="kcal-plus" type="button">+</button>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="exercise-minutes">Minutes:</label>
+                                <div class="spinner-input">
+                                    <button class="spinner-btn minus" id="minutes-minus" type="button">−</button>
+                                    <input type="number" id="exercise-minutes" class="exercise-minutes-input" value="30" min="1" step="1">
+                                    <button class="spinner-btn plus" id="minutes-plus" type="button">+</button>
+                                </div>
+                            </div>
+
+                            <button id="exercise-add-btn" class="action-btn primary" type="button">Add Exercise</button>
+                        </div>
+                    </div>
+
                     <!-- All Exercises List -->
                     <div id="exercises-for-date" class="exercises-section">
                         <h3 id="exercises-title">All Exercises</h3>
