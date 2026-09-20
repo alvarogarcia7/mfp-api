@@ -17,8 +17,20 @@ from typing import Annotated
 from fastapi import FastAPI, HTTPException, Header, Body
 from fastapi.staticfiles import StaticFiles
 
-from mfp.diary_repository import DiaryRepository
-from mfp.meal_schedule import MealSchedule
+import sys
+import importlib.util
+
+# Import diary modules without triggering mfp package __init__
+mfp_dir = Path(__file__).parent / "mfp"
+spec_repo = importlib.util.spec_from_file_location("diary_repository", mfp_dir / "diary_repository.py")
+diary_repo_module = importlib.util.module_from_spec(spec_repo)
+spec_repo.loader.exec_module(diary_repo_module)
+DiaryRepository = diary_repo_module.DiaryRepository
+
+spec_sched = importlib.util.spec_from_file_location("meal_schedule", mfp_dir / "meal_schedule.py")
+meal_sched_module = importlib.util.module_from_spec(spec_sched)
+spec_sched.loader.exec_module(meal_sched_module)
+MealSchedule = meal_sched_module.MealSchedule
 
 # Configure logging
 logging.basicConfig(
