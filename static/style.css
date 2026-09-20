@@ -1705,3 +1705,77 @@ body {
     color: #721c24;
     border-color: #f5c6cb;
 }
+
+/* Exercises Section */
+.exercises-section {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.exercises-section h3 {
+    margin: 0 0 15px 0;
+    color: #333;
+    font-size: 18px;
+}
+
+.exercises-list {
+    min-height: 80px;
+}
+
+.exercises-items {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.exercise-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    background: #f9f9f9;
+    border-radius: 6px;
+    border-left: 4px solid #667eea;
+}
+
+.exercise-info {
+    flex: 1;
+}
+
+.exercise-name {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 6px;
+}
+
+.exercise-details {
+    display: flex;
+    gap: 12px;
+    font-size: 13px;
+    color: #666;
+}
+
+.exercise-details span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.exercises-summary {
+    margin-top: 12px;
+    padding: 10px;
+    background: #f0f4ff;
+    border-radius: 6px;
+    font-weight: 600;
+    color: #667eea;
+    text-align: right;
+}
+
+.no-data {
+    text-align: center;
+    color: #999;
+    padding: 20px;
+    font-style: italic;
+}

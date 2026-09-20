@@ -38,6 +38,7 @@ let selectedPolarActivities = [];
 let currentFoodView = "table";  // "table" or "cards"
 let filteredFoodDatabase = [];
 let lastCheckedCheckbox = null;  // For shift+click range selection
+let exercisesForDate = [];  // Exercises for the selected date
 
 // Modal elements
 const loadMoreFoodsBtn = document.getElementById("load-more-foods-btn");
@@ -379,6 +380,9 @@ async function loadFoodEntries() {
             foodEntries = onlineData.meals || {};
         }
 
+        // Load exercises for the selected date
+        await loadExercisesForDate(dateStr);
+
         displayFoodEntries(foodEntries);
         updateCalorieSummary(data);
     } catch (err) {
@@ -427,7 +431,9 @@ function updateCalorieSummary(diaryData) {
     const totals = diaryData.totals || {};
     const consumed = totals.calories || 0;
     const goalCalories = userGoals.calories || 2000;
-    const exerciseCalories = 0; // No exercise data in diary yet
+
+    // Calculate exercise calories from loaded exercises
+    const exerciseCalories = exercisesForDate.reduce((sum, ex) => sum + (ex.calories || 0), 0);
     const netCalories = consumed - exerciseCalories;
     const remaining = goalCalories - netCalories;
     const isNegative = remaining < 0;
@@ -507,11 +513,66 @@ function updateCalorieSummary(diaryData) {
     caloriesSummary.style.display = "block";
 }
 
+async function loadExercisesForDate(dateStr) {
+    try {
+        const response = await fetch(`/api/exercises?date_str=${dateStr}`);
+        const data = await response.json();
+        exercisesForDate = data.exercises || [];
+        displayExercises(dateStr);
+        return exercisesForDate;
+    } catch (err) {
+        console.warn("Could not load exercises:", err);
+        exercisesForDate = [];
+        displayExercises(dateStr);
+        return [];
+    }
+}
+
+function displayExercises(dateStr) {
+    const exercisesList = document.getElementById("exercises-list");
+    const dateLabel = document.getElementById("exercises-date-label");
+
+    if (!exercisesList) return;
+
+    if (dateLabel) {
+        dateLabel.textContent = dateStr || "No date selected";
+    }
+
+    if (exercisesForDate.length === 0) {
+        exercisesList.innerHTML = '<div class="no-data">No exercises recorded for this date</div>';
+        return;
+    }
+
+    let totalCalories = 0;
+    let html = '<div class="exercises-items">';
+
+    exercisesForDate.forEach((exercise, idx) => {
+        const calories = exercise.calories || 0;
+        totalCalories += calories;
+
+        html += `<div class="exercise-item">
+            <div class="exercise-info">
+                <div class="exercise-name">${exercise.name || 'Unknown Activity'}</div>
+                <div class="exercise-details">
+                    ${exercise.duration ? `<span>⏱️ ${exercise.duration} min</span>` : ''}
+                    ${exercise.distance ? `<span>📍 ${exercise.distance} km</span>` : ''}
+                    ${calories > 0 ? `<span>🔥 ${calories} cal</span>` : ''}
+                </div>
+            </div>
+        </div>`;
+    });
+
+    html += '</div>';
+    html += `<div class="exercises-summary">Total: ${totalCalories} calories burned</div>`;
+    exercisesList.innerHTML = html;
+}
+
 function changeDate(dayOffset) {
     const currentDate = new Date(entryDate.valueAsDate);
     currentDate.setDate(currentDate.getDate() + dayOffset);
     entryDate.valueAsDate = currentDate;
     loadFoodEntries();
+    loadExercisesForDate(entryDate.value);
 }
 
 async function initializeMealSelect() {

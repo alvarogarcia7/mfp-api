@@ -252,8 +252,18 @@
 
                 <!-- Polar Flow Tab -->
                 <div id="polar-flow-tab" class="tab-content">
-                    <h2>Polar Flow Integration</h2>
-                    <p class="tab-description">Sync cardio activities from Polar Flow to MyFitnessPal</p>
+                    <h2>Polar Flow Exercises</h2>
+                    <p class="tab-description">View and sync cardio activities from Polar Flow</p>
+
+                    <!-- Exercises for Selected Date -->
+                    <div id="exercises-for-date" class="exercises-section">
+                        <h3>Exercises for <span id="exercises-date-label"></span></h3>
+                        <div id="exercises-list" class="exercises-list">
+                            <div class="loading">Loading exercises...</div>
+                        </div>
+                    </div>
+
+                    <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;">
 
                     <div id="polar-flow-status" class="status-box">
                         <div class="loading">Checking Polar Flow connection...</div>
