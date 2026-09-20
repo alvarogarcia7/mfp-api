@@ -778,19 +778,16 @@ async function logFood(food, quantity) {
     const payload = {
         date: entryDate.value,
         meal: currentMeal,
-        food_id: food.food_id,
-        weight_id: food.weight_id,
         quantity: quantity,
         name: food.name,
         calories: food.calories
     };
 
-    if (sessionId) {
+    try {
         const response = await fetch("/api/food-entries/add", {
             method: "POST",
             headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${sessionId}`
+                "Content-Type": "application/json"
             },
             body: JSON.stringify(payload)
         });
@@ -799,13 +796,12 @@ async function logFood(food, quantity) {
             console.error("Server rejected food entry:", food.name);
             return false;
         }
-        console.log("✅ Food logged to server:", food.name);
+        console.log("✅ Food added to local database:", food.name);
         return true;
+    } catch (err) {
+        console.error("Error adding food:", err);
+        return false;
     }
-
-    // Local-only mode (no server)
-    console.log("✅ Food recorded locally:", food.name);
-    return true;
 }
 
 function setupLoginListeners() {

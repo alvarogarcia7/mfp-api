@@ -42,12 +42,14 @@ logger = logging.getLogger(__name__)
 app = FastAPI()
 
 # In-memory food entries: {date -> {meal -> [foods]}}
+# Loaded from disk on startup
 _food_entries: dict = {}
 
 # Database file paths
 FOOD_DB_FILE = Path(__file__).parent / ".food_cache.json"
 EXERCISE_DB_FILE = Path(__file__).parent / ".exercise_cache.json"
 DIARY_DB_FILE = Path(__file__).parent / ".diary_cache.json"
+FOOD_ENTRIES_FILE = Path(__file__).parent / ".food_entries.json"
 USER_PROFILE_FILE = Path(__file__).parent / "data" / "user" / "profile.json"
 FOOD_SCHEMA_FILE = Path(__file__).parent / "food_schema.json"
 
@@ -86,6 +88,27 @@ def _safe_float(value) -> float:
         return float(value)
     except (TypeError, ValueError):
         return 0.0
+
+
+def _load_food_entries() -> dict:
+    """Load food entries from disk."""
+    if not FOOD_ENTRIES_FILE.exists():
+        return {}
+    try:
+        with open(FOOD_ENTRIES_FILE, 'r') as f:
+            return json.load(f)
+    except Exception as e:
+        logger.error(f"Error loading food entries: {e}")
+        return {}
+
+
+def _save_food_entries(entries: dict) -> None:
+    """Save food entries to disk."""
+    try:
+        with open(FOOD_ENTRIES_FILE, 'w') as f:
+            json.dump(entries, f, indent=2)
+    except Exception as e:
+        logger.error(f"Error saving food entries: {e}")
 
 
 # ============================================================================
@@ -157,9 +180,9 @@ async def get_food_entries(date_str: str | None = None):
 
 @app.post("/api/food-entries/add")
 async def add_food_entry(request: dict = Body(...)):
-    """Add a food entry to the diary (local storage only).
+    """Add a food entry to local storage.
 
-    Does NOT sync to MFP - use CLI command for that.
+    Entry is persisted to disk. Backend will sync to MFP via /api/food-entries/sync.
     """
     global _food_entries
 
@@ -183,13 +206,15 @@ async def add_food_entry(request: dict = Body(...)):
             "name": food_name,
             "calories": _safe_float(calories),
             "quantity": _safe_float(quantity),
-            "timestamp": date.today().isoformat()
+            "timestamp": date.today().isoformat(),
+            "synced": False
         }
 
         if meal not in _food_entries[date_str]:
             _food_entries[date_str][meal] = []
 
         _food_entries[date_str][meal].append(entry)
+        _save_food_entries(_food_entries)
         logger.info(f"Added food entry: {food_name} ({calories} cal) to {meal} on {date_str}")
 
         return {"success": True, "entry": entry}
@@ -436,36 +461,48 @@ if static_dir.exists():
 
 @app.on_event("startup")
 async def startup():
-    """Startup messages."""
+    """Startup messages and initialization."""
+    global _food_entries
+
+    # Load food entries from disk
+    _food_entries = _load_food_entries()
+
     logger.info("=" * 70)
     logger.info("MyFitnessPal Web App - Offline-First Mode")
     logger.info("=" * 70)
     logger.info("")
     logger.info("🔑 Key Points:")
-    logger.info("  • Web app ONLY displays data from local databases")
-    logger.info("  • NO direct API calls to MyFitnessPal or Polar Flow")
-    logger.info("  • Data acquisition: use CLI scripts")
-    logger.info("    - cli_fetch_food_data.py (download from MFP)")
-    logger.info("    - cli_parse_food_data.py (process to database)")
-    logger.info("    - cli_fetch_polar_data.py (download from Polar Flow)")
-    logger.info("    - cli_parse_polar_data.py (process to database)")
-    logger.info("  • Syncing to MFP: use CLI script")
-    logger.info("    - cli_sync_to_mfp.py (sync local entries to MFP)")
+    logger.info("  • Web app adds food entries locally")
+    logger.info("  • Backend syncs entries to MyFitnessPal")
+    logger.info("  • NO direct API calls from frontend to MFP")
+    logger.info("  • Data acquisition: use CLI scripts or web app")
+    logger.info("    - Web app: add foods via UI (stored locally, backend syncs)")
+    logger.info("    - CLI: cli_fetch_food_data.py (download MFP library)")
+    logger.info("    - CLI: cli_fetch_diary_data.py (download MFP diary)")
+    logger.info("  • Syncing to MFP: automatic via backend endpoint or CLI")
+    logger.info("    - POST /api/food-entries/sync (backend sync)")
+    logger.info("    - CLI: sync.py (alternative)")
     logger.info("")
     logger.info("📊 Available Data:")
 
     food_cache = _load_food_cache()
     exercise_cache = _load_exercise_cache()
+    food_entries_count = len([e for meals in _food_entries.values() for e in sum(meals.values(), [])])
 
     if food_cache:
         logger.info(f"  ✅ Food Library: {len(food_cache)} foods")
     else:
-        logger.info(f"  ⚠️  Food Library: not loaded (run cli_fetch_food_data.py + cli_parse_food_data.py)")
+        logger.info(f"  ⚠️  Food Library: not loaded")
 
     if exercise_cache:
         logger.info(f"  ✅ Exercises: {len(exercise_cache)} activities")
     else:
-        logger.info(f"  ⚠️  Exercises: not loaded (run cli_fetch_polar_data.py + cli_parse_polar_data.py)")
+        logger.info(f"  ⚠️  Exercises: not loaded")
+
+    if food_entries_count > 0:
+        logger.info(f"  ✅ Local Entries: {food_entries_count} foods (pending sync)")
+    else:
+        logger.info(f"  ℹ️  Local Entries: empty")
 
     logger.info("")
     logger.info("🌐 Web App running at: http://localhost:8000")
