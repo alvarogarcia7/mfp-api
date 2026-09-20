@@ -1,0 +1,183 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "User Profile Schema",
+  "description": "Schema for user profile data including daily goals",
+  "type": "object",
+  "properties": {
+    "username": {
+      "type": "string",
+      "description": "MyFitnessPal username"
+    },
+    "updated_at": {
+      "type": "string",
+      "description": "ISO 8601 timestamp when profile was last updated",
+      "format": "date-time"
+    },
+    "fetched_at": {
+      "type": "string",
+      "description": "ISO 8601 timestamp when data was fetched from API",
+      "format": "date-time"
+    },
+    "goals": {
+      "type": "object",
+      "description": "Daily nutritional goals",
+      "properties": {
+        "calories": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "integer",
+              "description": "Daily calorie goal"
+            },
+            "unit": {
+              "type": "string",
+              "enum": ["kcal", "cal"]
+            }
+          }
+        },
+        "protein": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "description": "Daily protein goal in grams"
+            },
+            "unit": {
+              "type": "string",
+              "enum": ["g"]
+            }
+          }
+        },
+        "carbohydrates": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "description": "Daily carbohydrates goal in grams"
+            },
+            "unit": {
+              "type": "string",
+              "enum": ["g"]
+            }
+          }
+        },
+        "fat": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "description": "Daily fat goal in grams"
+            },
+            "unit": {
+              "type": "string",
+              "enum": ["g"]
+            }
+          }
+        },
+        "fiber": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "description": "Daily fiber goal in grams"
+            },
+            "unit": {
+              "type": "string",
+              "enum": ["g"]
+            }
+          }
+        },
+        "sodium": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "description": "Daily sodium goal in mg"
+            },
+            "unit": {
+              "type": "string",
+              "enum": ["mg"]
+            }
+          }
+        },
+        "sugar": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "description": "Daily sugar goal in grams"
+            },
+            "unit": {
+              "type": "string",
+              "enum": ["g"]
+            }
+          }
+        },
+        "cholesterol": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "description": "Daily cholesterol goal in mg"
+            },
+            "unit": {
+              "type": "string",
+              "enum": ["mg"]
+            }
+          }
+        },
+        "saturated_fat": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "number",
+              "description": "Daily saturated fat goal in grams"
+            },
+            "unit": {
+              "type": "string",
+              "enum": ["g"]
+            }
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "preferences": {
+      "type": "object",
+      "description": "User preferences",
+      "properties": {
+        "diary_preference": {
+          "type": ["string", "null"]
+        },
+        "locale": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "profile": {
+      "type": "object",
+      "description": "User profile information",
+      "properties": {
+        "age": {
+          "type": ["integer", "null"]
+        },
+        "gender": {
+          "type": ["string", "null"]
+        },
+        "height": {
+          "type": ["number", "null"]
+        },
+        "weight": {
+          "type": ["number", "null"]
+        },
+        "activity_level": {
+          "type": ["string", "null"]
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "required": ["username", "goals"],
+  "additionalProperties": true
+}

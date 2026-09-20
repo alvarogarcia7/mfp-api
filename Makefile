@@ -1,4 +1,4 @@
-.PHONY: help install install-prod run run-prod test test-cov typecheck clean lint format dev-setup mfp-download mfp-parse mfp-diary-download mfp-diary-parse polar-download polar-parse pre-commit-install
+.PHONY: help install install-prod run run-prod test test-cov typecheck clean lint format dev-setup mfp-download mfp-parse mfp-diary-download mfp-diary-parse mfp-goals-download mfp-goals-parse polar-download polar-parse pre-commit-install
 
 ## Show help for all targets
 help:
@@ -22,6 +22,8 @@ help:
 	@echo "  make mfp-parse          - Parse MyFitnessPal raw data into cache"
 	@echo "  make mfp-diary-download - Download MyFitnessPal daily diary (today)"
 	@echo "  make mfp-diary-parse    - Parse MyFitnessPal diary into cache"
+	@echo "  make mfp-goals-download - Download MyFitnessPal user goals (kcal, macros)"
+	@echo "  make mfp-goals-parse    - Parse MyFitnessPal goals into user profile"
 	@echo "  make polar-download     - Download Polar Flow data (since last entry)"
 	@echo "  make polar-parse        - Parse Polar Flow raw data into cache"
 	@echo ""
@@ -34,6 +36,7 @@ help:
 	@echo "  make install && make run"
 	@echo "  make mfp-download && make mfp-parse"
 	@echo "  make mfp-diary-download && make mfp-diary-parse"
+	@echo "  make mfp-goals-download && make mfp-goals-parse"
 	@echo "  make polar-download && make polar-parse"
 
 ## Install all dependencies (dev + prod)
@@ -150,6 +153,31 @@ mfp-diary-download:
 mfp-diary-parse:
 	@echo "Parsing MyFitnessPal diary data..."
 	uv run python -m backend.mfp.parse_diary --merge
+
+## Download MyFitnessPal user goals (kcal, macros, etc)
+mfp-goals-download:
+	@if [ ! -f .env.local ]; then \
+		echo "Error: .env.local not found"; \
+		echo "Copy .env.local.example to .env.local and add your credentials"; \
+		exit 1; \
+	fi
+	@. ./.env.local; \
+	if [ -n "$$MFP_SESSION_COOKIE" ]; then \
+		echo "Downloading MyFitnessPal user goals using session cookie..."; \
+		uv run python -m backend.mfp.fetch_goals --cookie "$$MFP_SESSION_COOKIE"; \
+	elif [ -n "$$MFP_USERNAME" ] && [ -n "$$MFP_PASSWORD" ]; then \
+		echo "Downloading MyFitnessPal user goals using credentials..."; \
+		uv run python -m backend.mfp.fetch_goals --username "$$MFP_USERNAME" --password "$$MFP_PASSWORD"; \
+	else \
+		echo "Error: Missing MFP credentials in .env.local"; \
+		echo "Set either MFP_SESSION_COOKIE or both MFP_USERNAME and MFP_PASSWORD"; \
+		exit 1; \
+	fi
+
+## Parse MyFitnessPal goals into user profile
+mfp-goals-parse:
+	@echo "Parsing MyFitnessPal user goals..."
+	uv run python -m backend.mfp.parse_goals
 
 ## Download Polar Flow data (incremental from last entry)
 polar-download:
