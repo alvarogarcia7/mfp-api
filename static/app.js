@@ -61,7 +61,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Handle URL hash changes
     window.addEventListener("hashchange", () => {
-        const hash = window.location.hash.slice(1) || "food-instances";
+        const hash = window.location.hash.slice(1) || "food-entries";
         switchTab(hash);
     });
 
