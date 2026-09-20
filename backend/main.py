@@ -48,6 +48,7 @@ _food_entries: dict = {}
 FOOD_DB_FILE = Path(__file__).parent / ".food_cache.json"
 EXERCISE_DB_FILE = Path(__file__).parent / ".exercise_cache.json"
 DIARY_DB_FILE = Path(__file__).parent / ".diary_cache.json"
+USER_PROFILE_FILE = Path(__file__).parent / "data" / "user" / "profile.json"
 FOOD_SCHEMA_FILE = Path(__file__).parent / "food_schema.json"
 
 
@@ -279,6 +280,59 @@ async def get_meal_schedule():
     except Exception as e:
         logger.error(f"Error getting meal schedule: {e}")
         raise HTTPException(status_code=500, detail=f"Error: {e}")
+
+
+@app.get("/api/user-goals")
+async def get_user_goals():
+    """Get user's daily nutritional goals from profile.
+
+    Returns daily calorie goal, macro targets, and other goals.
+    """
+    try:
+        if not USER_PROFILE_FILE.exists():
+            # Return default goals if profile not set up
+            return {
+                "calories": 2000,
+                "protein": 50,
+                "carbohydrates": 300,
+                "fat": 65,
+                "fiber": 25,
+                "sodium": 2300,
+                "sugar": 50,
+                "cholesterol": 300,
+                "saturated_fat": 20,
+            }
+
+        with open(USER_PROFILE_FILE, 'r') as f:
+            profile = json.load(f)
+
+        goals = profile.get("goals", {})
+        # Extract values from goal objects {value: X, unit: Y}
+        return {
+            "calories": goals.get("calories", {}).get("value", 2000),
+            "protein": goals.get("protein", {}).get("value", 50),
+            "carbohydrates": goals.get("carbohydrates", {}).get("value", 300),
+            "fat": goals.get("fat", {}).get("value", 65),
+            "fiber": goals.get("fiber", {}).get("value", 25),
+            "sodium": goals.get("sodium", {}).get("value", 2300),
+            "sugar": goals.get("sugar", {}).get("value", 50),
+            "cholesterol": goals.get("cholesterol", {}).get("value", 300),
+            "saturated_fat": goals.get("saturated_fat", {}).get("value", 20),
+        }
+    except Exception as e:
+        logger.error(f"Error getting user goals: {e}")
+        # Return defaults on error
+        return {
+            "calories": 2000,
+            "protein": 50,
+            "carbohydrates": 300,
+            "fat": 65,
+            "fiber": 25,
+            "sodium": 2300,
+            "sugar": 50,
+            "cholesterol": 300,
+            "saturated_fat": 20,
+        }
 
 
 # ============================================================================

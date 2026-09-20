@@ -123,8 +123,15 @@
                         </div>
                     </div>
 
+                    <!-- Color Scheme Selector -->
+                    <div class="color-scheme-selector">
+                        <label>Color Theme:</label>
+                        <button id="scheme-maroon" class="scheme-btn active" data-scheme="maroon" title="Maroon theme">🎨 Maroon</button>
+                        <button id="scheme-emerald" class="scheme-btn" data-scheme="emerald" title="Emerald theme">🎨 Emerald</button>
+                    </div>
+
                     <!-- Calorie Summary -->
-                    <div id="calorie-summary" class="calorie-summary">
+                    <div id="calorie-summary" class="calorie-summary scheme-maroon">
                         <div class="summary-header">
                             <h3>Daily Summary</h3>
                         </div>
@@ -132,42 +139,49 @@
                             <div class="progress-bar-wrapper">
                                 <div class="bar-info">
                                     <div class="bar-row">
-                                        <span class="label-consumed">Consumed</span>
-                                        <span class="value-consumed" id="eaten-val">0</span>
-                                    </div>
-                                    <div class="bar-row">
-                                        <span class="label-goal">Daily Goal</span>
-                                        <span class="value-goal" id="goal-label">2000</span>
+                                        <div class="consumed-section">
+                                            <span class="label-consumed">Food</span>
+                                            <span class="value-consumed" id="eaten-val">0</span>
+                                        </div>
+                                        <div class="exercise-section">
+                                            <span class="label-exercise">Exercise</span>
+                                            <span class="value-exercise" id="exercise-earned-val">0</span>
+                                        </div>
+                                        <div class="goal-section">
+                                            <span class="label-goal">Daily Goal</span>
+                                            <span class="value-goal" id="goal-label">2000</span>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="progress-container">
-                                    <div class="progress-bar">
-                                        <div id="eaten-bar" class="progress-fill" style="width: 0%"></div>
+                                    <div class="progress-bar" id="progress-bar">
+                                        <div id="eaten-bar" class="progress-fill eaten-portion" style="width: 0%"></div>
+                                        <div id="exercise-bar" class="progress-fill exercise-portion" style="width: 0%"></div>
                                         <div id="goal-marker" class="goal-line"></div>
                                     </div>
                                 </div>
-                                <div class="bar-remaining">
+                                <div class="bar-remaining" id="bar-remaining-container">
                                     <span class="label">Remaining</span>
                                     <span class="value" id="remaining-val">2000</span>
                                 </div>
                             </div>
                         </div>
                         <div class="calorie-stats">
-                            <div class="stat">
+                            <div class="stat stat-eaten">
                                 <span class="stat-icon">🍽️</span>
                                 <div class="stat-content">
-                                    <span class="label">Consumed</span>
+                                    <span class="label">Food</span>
                                     <span id="eaten-val-stat" class="value">0 cal</span>
                                 </div>
                             </div>
-                            <div class="stat">
+                            <div class="stat stat-exercise">
                                 <span class="stat-icon">🏃</span>
                                 <div class="stat-content">
                                     <span class="label">Exercise</span>
-                                    <span id="exercise-val" class="value">0 cal</span>
+                                    <span id="exercise-val-stat" class="value">0 cal</span>
                                 </div>
                             </div>
-                            <div class="stat">
+                            <div class="stat stat-remaining" id="remaining-stat">
                                 <span class="stat-icon">✨</span>
                                 <div class="stat-content">
                                     <span class="label">Remaining</span>

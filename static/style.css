@@ -207,14 +207,74 @@ body {
     padding: 0 20px;
 }
 
+/* Color Scheme Selector */
+.color-scheme-selector {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    align-items: center;
+    font-size: 14px;
+}
+
+.color-scheme-selector label {
+    font-weight: 600;
+    color: #333;
+}
+
+.scheme-btn {
+    padding: 6px 12px;
+    background: white;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+
+.scheme-btn:hover {
+    border-color: #667eea;
+}
+
+.scheme-btn.active {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
 /* Calorie Summary */
 .calorie-summary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     padding: 24px;
     border-radius: 12px;
     margin-bottom: 24px;
-    box-shadow: 0 8px 16px rgba(102, 126, 234, 0.15);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
     color: white;
+    transition: background 0.3s ease;
+}
+
+.calorie-summary.scheme-maroon {
+    background: linear-gradient(135deg, #8B3A3A 0%, #A52A2A 100%);
+    box-shadow: 0 8px 16px rgba(139, 58, 58, 0.15);
+}
+
+.calorie-summary.scheme-emerald {
+    background: linear-gradient(135deg, #047857 0%, #059669 100%);
+    box-shadow: 0 8px 16px rgba(4, 120, 87, 0.15);
+}
+
+.calorie-summary.scheme-maroon .progress-fill.eaten-portion {
+    background: linear-gradient(90deg, #C85555, #D97070);
+}
+
+.calorie-summary.scheme-maroon .progress-fill.exercise-portion {
+    background: linear-gradient(90deg, #D4A574, #E8B89E);
+}
+
+.calorie-summary.scheme-emerald .progress-fill.eaten-portion {
+    background: linear-gradient(90deg, #10B981, #34D399);
+}
+
+.calorie-summary.scheme-emerald .progress-fill.exercise-portion {
+    background: linear-gradient(90deg, #F59E0B, #FBBF24);
 }
 
 .summary-header {
@@ -244,79 +304,137 @@ body {
 
 .bar-info {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    font-size: 13px;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    font-size: 12px;
 }
 
 .bar-row {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    gap: 6px;
 }
 
-.bar-row .label-consumed,
-.bar-row .label-goal {
-    opacity: 0.9;
-    font-weight: 500;
+.consumed-section,
+.exercise-section,
+.goal-section {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
-.bar-row .value-consumed,
-.bar-row .value-goal {
+.consumed-section .label-consumed,
+.exercise-section .label-exercise,
+.goal-section .label-goal {
+    opacity: 0.85;
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.consumed-section .value-consumed,
+.exercise-section .value-exercise,
+.goal-section .value-goal {
     font-weight: 700;
-    font-size: 16px;
+    font-size: 18px;
 }
 
 .progress-container {
-    margin: 8px 0;
+    margin: 12px 0;
+    position: relative;
 }
 
 .progress-bar {
     position: relative;
-    height: 28px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 14px;
-    overflow: hidden;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 16px;
     border: 1px solid rgba(255, 255, 255, 0.3);
+    overflow: visible;
+    display: flex;
+}
+
+.progress-bar.exceeded {
+    overflow-x: auto;
 }
 
 .progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
-    border-radius: 14px;
     transition: width 0.4s ease;
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.15);
+    display: flex;
+}
+
+.progress-fill.eaten-portion {
+    border-radius: 16px 0 0 16px;
+}
+
+.progress-fill.exercise-portion {
+    border-radius: 0 16px 16px 0;
+}
+
+.progress-bar.exceeded .progress-fill.exercise-portion {
+    border-radius: 0;
+}
+
+.progress-bar.exceeded .goal-line {
+    position: absolute;
+    left: 100%;
 }
 
 .goal-line {
     position: absolute;
     top: 0;
-    width: 2px;
+    width: 3px;
     height: 100%;
     background: white;
-    opacity: 0.7;
+    opacity: 0.8;
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+    z-index: 10;
+}
+
+.progress-bar.exceeded {
+    background: rgba(255, 0, 0, 0.15);
+}
+
+.progress-bar.exceeded .exercise-portion {
+    background: linear-gradient(90deg, #EF4444, #DC2626) !important;
 }
 
 .bar-remaining {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-top: 4px;
+    padding: 8px 12px;
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 600;
     opacity: 0.95;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    transition: all 0.3s ease;
+}
+
+.bar-remaining.negative {
+    background: rgba(239, 68, 68, 0.2);
+    border: 1px solid rgba(239, 68, 68, 0.4);
 }
 
 .bar-remaining .value {
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 700;
+    transition: color 0.3s ease;
+}
+
+.bar-remaining.negative .value {
+    color: #FF6B6B;
 }
 
 .calorie-stats {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 12px;
-    padding-top: 12px;
+    padding-top: 16px;
     border-top: 1px solid rgba(255, 255, 255, 0.2);
 }
 
@@ -324,10 +442,19 @@ body {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 8px;
-    background: rgba(255, 255, 255, 0.05);
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.08);
     border-radius: 8px;
     text-align: left;
+    transition: background 0.2s;
+}
+
+.stat.stat-remaining.negative {
+    background: rgba(239, 68, 68, 0.2);
+}
+
+.stat:hover {
+    background: rgba(255, 255, 255, 0.12);
 }
 
 .stat-icon {

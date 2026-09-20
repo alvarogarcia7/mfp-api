@@ -4,6 +4,8 @@ let currentUser = null;
 let localFoodDatabase = [];
 let foodEntries = {};
 let currentMeal = "snacks";
+let userGoals = { calories: 2000, protein: 50, carbohydrates: 300, fat: 65 };
+let colorScheme = localStorage.getItem("colorScheme") || "maroon";
 
 // DOM elements
 const tabNavBtns = document.querySelectorAll(".tab-nav-btn");
@@ -96,6 +98,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Pre-fill meal select based on current time
     initializeMealSelect();
+
+    // Load user goals
+    loadUserGoals();
+
+    // Set up color scheme buttons
+    document.querySelectorAll(".scheme-btn").forEach(btn => {
+        btn.addEventListener("click", () => setColorScheme(btn.dataset.scheme));
+    });
+
+    // Apply saved color scheme
+    applyColorScheme(colorScheme);
 
     // Login sub-tabs
     document.querySelectorAll("[data-subtab]").forEach(btn => {
@@ -371,20 +384,74 @@ async function loadFoodEntries() {
     }
 }
 
+async function loadUserGoals() {
+    try {
+        const response = await fetch("/api/user-goals");
+        const data = await response.json();
+        userGoals = data;
+        console.log("✅ Loaded user goals:", userGoals);
+    } catch (err) {
+        console.warn("Could not load user goals, using defaults");
+    }
+}
+
+function setColorScheme(scheme) {
+    colorScheme = scheme;
+    localStorage.setItem("colorScheme", scheme);
+    applyColorScheme(scheme);
+}
+
+function applyColorScheme(scheme) {
+    const summary = document.getElementById("calorie-summary");
+    if (summary) {
+        summary.classList.remove("scheme-maroon", "scheme-emerald");
+        summary.classList.add("scheme-" + scheme);
+    }
+
+    // Update button states
+    document.querySelectorAll(".scheme-btn").forEach(btn => {
+        btn.classList.remove("active");
+        if (btn.dataset.scheme === scheme) {
+            btn.classList.add("active");
+        }
+    });
+}
+
 function updateCalorieSummary(diaryData) {
     const caloriesSummary = document.getElementById("calorie-summary");
     if (!caloriesSummary) return;
 
     const totals = diaryData.totals || {};
     const consumed = totals.calories || 0;
-    const goalCalories = 2000; // Default goal
-    const exerciseCalories = 0; // No exercise data in diary
-    const remaining = goalCalories - consumed + exerciseCalories;
+    const goalCalories = userGoals.calories || 2000;
+    const exerciseCalories = 0; // No exercise data in diary yet
+    const netCalories = consumed - exerciseCalories;
+    const remaining = goalCalories - netCalories;
+    const isNegative = remaining < 0;
 
-    // Update progress bar
-    const percentage = Math.min((consumed / goalCalories) * 100, 100);
+    // Update progress bar with food and exercise portions
+    const consumedPercentage = Math.min((consumed / goalCalories) * 100, 100);
+    const exercisePercentage = Math.min((exerciseCalories / goalCalories) * 100, 100);
+
     const eatenBar = document.getElementById("eaten-bar");
-    if (eatenBar) eatenBar.style.width = percentage + "%";
+    if (eatenBar) eatenBar.style.width = consumedPercentage + "%";
+
+    const exerciseBar = document.getElementById("exercise-bar");
+    if (exerciseBar) exerciseBar.style.width = exercisePercentage + "%";
+
+    // Handle bar overflow when exceeding goal
+    const progressBar = document.getElementById("progress-bar");
+    if (progressBar) {
+        if (netCalories > goalCalories) {
+            progressBar.classList.add("exceeded");
+            const totalPercentage = Math.min((netCalories / goalCalories) * 100, 200);
+            // Adjust layout to show overflow
+            progressBar.style.minWidth = Math.max(totalPercentage, 100) + "%";
+        } else {
+            progressBar.classList.remove("exceeded");
+            progressBar.style.minWidth = "100%";
+        }
+    }
 
     // Update goal marker position
     const goalMarker = document.getElementById("goal-marker");
@@ -396,17 +463,43 @@ function updateCalorieSummary(diaryData) {
     const eatenValStat = document.getElementById("eaten-val-stat");
     if (eatenValStat) eatenValStat.textContent = consumed + " cal";
 
+    const exerciseVal = document.getElementById("exercise-earned-val");
+    if (exerciseVal) exerciseVal.textContent = exerciseCalories;
+    const exerciseValStat = document.getElementById("exercise-val-stat");
+    if (exerciseValStat) exerciseValStat.textContent = exerciseCalories + " cal";
+
     const goalLabel = document.getElementById("goal-label");
     if (goalLabel) goalLabel.textContent = goalCalories;
 
-    const exerciseVal = document.getElementById("exercise-val");
-    if (exerciseVal) exerciseVal.textContent = exerciseCalories + " cal";
+    // Handle negative remaining
+    const remainingContainer = document.getElementById("bar-remaining-container");
+    if (remainingContainer) {
+        if (isNegative) {
+            remainingContainer.classList.add("negative");
+        } else {
+            remainingContainer.classList.remove("negative");
+        }
+    }
 
     const remainingVal = document.getElementById("remaining-val");
-    if (remainingVal) remainingVal.textContent = Math.max(remaining, 0);
+    if (remainingVal) {
+        remainingVal.textContent = isNegative ? "-" + Math.abs(remaining) : remaining;
+    }
 
     const remainingValStat = document.getElementById("remaining-val-stat");
-    if (remainingValStat) remainingValStat.textContent = Math.max(remaining, 0) + " cal";
+    if (remainingValStat) {
+        remainingValStat.textContent = isNegative ? "-" + Math.abs(remaining) + " cal" : remaining + " cal";
+    }
+
+    // Update remaining stat styling
+    const remainingStat = document.getElementById("remaining-stat");
+    if (remainingStat) {
+        if (isNegative) {
+            remainingStat.classList.add("negative");
+        } else {
+            remainingStat.classList.remove("negative");
+        }
+    }
 
     caloriesSummary.style.display = "block";
 }
