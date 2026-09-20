@@ -69,6 +69,29 @@
         "additionalProperties": false
       }
     },
+    "totals": {
+      "type": "object",
+      "description": "Daily totals across all meals",
+      "properties": {
+        "calories": {
+          "type": "integer",
+          "description": "Total calories for the day"
+        },
+        "protein": {
+          "type": "number",
+          "description": "Total protein in grams"
+        },
+        "carbs": {
+          "type": "number",
+          "description": "Total carbohydrates in grams"
+        },
+        "fat": {
+          "type": "number",
+          "description": "Total fat in grams"
+        }
+      },
+      "required": ["calories"]
+    },
     "metadata": {
       "type": "object",
       "description": "Metadata about this diary entry",
@@ -87,6 +110,6 @@
       "additionalProperties": true
     }
   },
-  "required": ["date", "synced_at", "meals", "metadata"],
-  "additionalProperties": false
+  "required": ["date", "synced_at", "meals", "totals", "metadata"],
+  "additionalProperties": true
 }

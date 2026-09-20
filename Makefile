@@ -149,7 +149,7 @@ mfp-diary-download:
 ## Parse MyFitnessPal diary data into cache
 mfp-diary-parse:
 	@echo "Parsing MyFitnessPal diary data..."
-	@echo "Note: diary parse functionality to be implemented"
+	uv run python -m backend.mfp.parse_diary --merge
 
 ## Download Polar Flow data (incremental from last entry)
 polar-download:
