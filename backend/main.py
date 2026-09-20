@@ -137,6 +137,25 @@ async def get_status():
     }
 
 
+@app.get("/api/polar-flow/status")
+async def get_polar_flow_status():
+    """Get Polar Flow connection status.
+
+    Returns information about exercise data availability.
+    """
+    exercise_cache = _load_exercise_cache()
+    has_exercises = bool(exercise_cache)
+    exercise_count = len(exercise_cache) if exercise_cache else 0
+
+    return {
+        "connected": has_exercises,
+        "configured": True,  # We support offline-first mode
+        "username": "Local Database",
+        "message": f"✅ {exercise_count} exercises available in local database" if has_exercises else "⚠️ No exercises loaded yet. Run 'make polar-download && make polar-parse' to import exercises.",
+        "exercises_available": exercise_count
+    }
+
+
 # ============================================================================
 # Food Library (Read-only from local cache)
 # ============================================================================
