@@ -404,7 +404,7 @@ function setColorScheme(scheme) {
 function applyColorScheme(scheme) {
     const summary = document.getElementById("calorie-summary");
     if (summary) {
-        summary.classList.remove("scheme-maroon", "scheme-emerald");
+        summary.classList.remove("scheme-maroon", "scheme-emerald", "scheme-navy", "scheme-green2", "scheme-yellow", "scheme-orange");
         summary.classList.add("scheme-" + scheme);
     }
 
