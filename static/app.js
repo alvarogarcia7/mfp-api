@@ -363,10 +363,51 @@ async function loadFoodEntries() {
         }
 
         displayFoodEntries(foodEntries);
+        updateCalorieSummary(data);
     } catch (err) {
         console.warn("Note: Food entries not available, using local data");
         displayFoodEntries({});
     }
+}
+
+function updateCalorieSummary(diaryData) {
+    const caloriesSummary = document.getElementById("calorie-summary");
+    if (!caloriesSummary) return;
+
+    const totals = diaryData.totals || {};
+    const consumed = totals.calories || 0;
+    const goalCalories = 2000; // Default goal
+    const exerciseCalories = 0; // No exercise data in diary
+    const remaining = goalCalories - consumed + exerciseCalories;
+
+    // Update progress bar
+    const percentage = Math.min((consumed / goalCalories) * 100, 100);
+    const eatenBar = document.getElementById("eaten-bar");
+    if (eatenBar) eatenBar.style.width = percentage + "%";
+
+    // Update goal marker position
+    const goalMarker = document.getElementById("goal-marker");
+    if (goalMarker) goalMarker.style.left = "100%";
+
+    // Update text values
+    const eatenVal = document.getElementById("eaten-val");
+    if (eatenVal) eatenVal.textContent = consumed;
+    const eatenValStat = document.getElementById("eaten-val-stat");
+    if (eatenValStat) eatenValStat.textContent = consumed + " cal";
+
+    const goalLabel = document.getElementById("goal-label");
+    if (goalLabel) goalLabel.textContent = goalCalories;
+
+    const exerciseVal = document.getElementById("exercise-val");
+    if (exerciseVal) exerciseVal.textContent = exerciseCalories + " cal";
+
+    const remainingVal = document.getElementById("remaining-val");
+    if (remainingVal) remainingVal.textContent = Math.max(remaining, 0);
+
+    const remainingValStat = document.getElementById("remaining-val-stat");
+    if (remainingValStat) remainingValStat.textContent = Math.max(remaining, 0) + " cal";
+
+    caloriesSummary.style.display = "block";
 }
 
 function changeDate(dayOffset) {
@@ -524,7 +565,7 @@ function deselectAllResults() {
 async function addAllSelected() {
     const toAdd = currentFoodItems.filter(item => item.selected);
     if (toAdd.length === 0) {
-        alert("Please select at least one food");
+        showNotification("Please select at least one food", "warning");
         return;
     }
 
@@ -532,10 +573,12 @@ async function addAllSelected() {
         addAllBtn.disabled = true;
         addAllBtn.textContent = "Adding...";
 
+        let successCount = 0;
         for (let i = 0; i < toAdd.length; i++) {
             const item = toAdd[i];
             const food = item.selected;
-            await logFood(food, item.parsed.quantity);
+            const result = await logFood(food, item.parsed.quantity);
+            if (result) successCount++;
 
             if (i < toAdd.length - 1) {
                 const delay = Math.random() * 20 + 5;
@@ -543,18 +586,44 @@ async function addAllSelected() {
             }
         }
 
-        foodInput.value = "";
-        searchResults.style.display = "none";
-        currentFoodItems = [];
-        loadFoodEntries();
-        alert("✅ Foods added successfully!");
+        // Only show success message if foods were actually added
+        if (successCount > 0) {
+            foodInput.value = "";
+            searchResults.style.display = "none";
+            currentFoodItems = [];
+            await loadFoodEntries();
+            showNotification(`✅ ${successCount} food${successCount > 1 ? 's' : ''} added successfully!`, "success");
+        } else {
+            showNotification("⚠️ Foods could not be added. Please try again.", "error");
+        }
     } catch (err) {
         console.error("Error:", err);
-        alert(`Error adding foods: ${err.message}`);
+        showNotification(`Error adding foods: ${err.message}`, "error");
     } finally {
         addAllBtn.disabled = false;
         addAllBtn.textContent = "Add All";
     }
+}
+
+function showNotification(message, type) {
+    const notification = document.createElement("div");
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 16px;
+        background: ${type === 'success' ? '#d4edda' : type === 'warning' ? '#fff3cd' : '#f8d7da'};
+        color: ${type === 'success' ? '#155724' : type === 'warning' ? '#856404' : '#721c24'};
+        border: 1px solid ${type === 'success' ? '#c3e6cb' : type === 'warning' ? '#ffeaa7' : '#f5c6cb'};
+        border-radius: 4px;
+        font-size: 14px;
+        z-index: 9999;
+        animation: slideIn 0.3s ease-out;
+    `;
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 3000);
 }
 
 async function logFood(food, quantity) {
@@ -569,7 +638,6 @@ async function logFood(food, quantity) {
     };
 
     if (sessionId) {
-        payload.Authorization = `Bearer ${sessionId}`;
         const response = await fetch("/api/food-entries/add", {
             method: "POST",
             headers: {
@@ -579,10 +647,17 @@ async function logFood(food, quantity) {
             body: JSON.stringify(payload)
         });
 
-        if (!response.ok) throw new Error("Failed to log food");
+        if (!response.ok) {
+            console.error("Server rejected food entry:", food.name);
+            return false;
+        }
+        console.log("✅ Food logged to server:", food.name);
+        return true;
     }
 
-    console.log("✅ Food logged:", food.name);
+    // Local-only mode (no server)
+    console.log("✅ Food recorded locally:", food.name);
+    return true;
 }
 
 function setupLoginListeners() {

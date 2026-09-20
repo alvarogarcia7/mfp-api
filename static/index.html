@@ -23,7 +23,6 @@
                 <button class="tab-nav-btn active" data-tab="food-instances">Food Library</button>
                 <button class="tab-nav-btn" data-tab="food-entries">Today's Entries</button>
                 <button class="tab-nav-btn" data-tab="polar-flow">Polar Flow</button>
-                <button class="tab-nav-btn" data-tab="login">Login (Optional)</button>
             </div>
 
             <div class="dashboard">
@@ -125,31 +124,56 @@
                         </div>
                     </div>
 
-                    <!-- Calorie Summary (only when logged in) -->
-                    <div id="calorie-summary" class="calorie-summary" style="display: none;">
-                        <div class="date-header" id="date-header"></div>
-                        <div class="calorie-bar">
-                            <div class="bar-labels">
-                                <span id="eaten-label">0</span>
-                                <span id="goal-label">2000</span>
-                            </div>
-                            <div class="bar-container">
-                                <div id="eaten-bar" class="eaten-bar"></div>
-                                <div id="goal-marker" class="goal-marker"></div>
+                    <!-- Calorie Summary -->
+                    <div id="calorie-summary" class="calorie-summary">
+                        <div class="summary-header">
+                            <h3>Daily Summary</h3>
+                        </div>
+                        <div class="calorie-display">
+                            <div class="progress-bar-wrapper">
+                                <div class="bar-info">
+                                    <div class="bar-row">
+                                        <span class="label-consumed">Consumed</span>
+                                        <span class="value-consumed" id="eaten-val">0</span>
+                                    </div>
+                                    <div class="bar-row">
+                                        <span class="label-goal">Daily Goal</span>
+                                        <span class="value-goal" id="goal-label">2000</span>
+                                    </div>
+                                </div>
+                                <div class="progress-container">
+                                    <div class="progress-bar">
+                                        <div id="eaten-bar" class="progress-fill" style="width: 0%"></div>
+                                        <div id="goal-marker" class="goal-line"></div>
+                                    </div>
+                                </div>
+                                <div class="bar-remaining">
+                                    <span class="label">Remaining</span>
+                                    <span class="value" id="remaining-val">2000</span>
+                                </div>
                             </div>
                         </div>
                         <div class="calorie-stats">
                             <div class="stat">
-                                <span class="label">Eaten</span>
-                                <span id="eaten-val" class="value">0</span>
+                                <span class="stat-icon">🍽️</span>
+                                <div class="stat-content">
+                                    <span class="label">Consumed</span>
+                                    <span id="eaten-val-stat" class="value">0 cal</span>
+                                </div>
                             </div>
                             <div class="stat">
-                                <span class="label">Exercise</span>
-                                <span id="exercise-val" class="value">0</span>
+                                <span class="stat-icon">🏃</span>
+                                <div class="stat-content">
+                                    <span class="label">Exercise</span>
+                                    <span id="exercise-val" class="value">0 cal</span>
+                                </div>
                             </div>
                             <div class="stat">
-                                <span class="label">Remaining</span>
-                                <span id="remaining-val" class="value">2000</span>
+                                <span class="stat-icon">✨</span>
+                                <div class="stat-content">
+                                    <span class="label">Remaining</span>
+                                    <span id="remaining-val-stat" class="value">2000 cal</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -250,46 +274,6 @@
                         </div>
 
                         <div id="polar-sync-status" class="status-message"></div>
-                    </div>
-                </div>
-
-                <!-- Login Tab -->
-                <div id="login-tab" class="tab-content">
-                    <div class="login-container login-minimal">
-                        <h2>Connect to MyFitnessPal (Optional)</h2>
-                        <p class="tab-description">Login to sync your food data with MyFitnessPal and see calorie goals</p>
-
-                        <!-- Login Method Tabs -->
-                        <div class="login-tabs">
-                            <button class="tab-btn active" data-subtab="password">Username/Password</button>
-                            <button class="tab-btn" data-subtab="cookie">Session Cookie</button>
-                        </div>
-
-                        <!-- Password Login Form -->
-                        <form id="login-form" class="login-tab active" data-subtab="password">
-                            <input type="text" id="username" placeholder="Username or Email" required>
-                            <input type="password" id="password" placeholder="Password" required>
-                            <button type="submit">Log In</button>
-                            <div id="login-error" class="error"></div>
-                        </form>
-
-                        <!-- Cookie Login Form -->
-                        <form id="cookie-form" class="login-tab" data-subtab="cookie">
-                            <input type="text" id="cookie-username" placeholder="MyFitnessPal Username" required>
-                            <label for="cookie-input">Session Cookie</label>
-                            <textarea id="cookie-input" placeholder="Paste your __Secure-next-auth.session-token cookie value" rows="4" required></textarea>
-                            <p class="help-text">Get your cookie by:</p>
-                            <ol class="help-text">
-                                <li>Open MyFitnessPal in your browser</li>
-                                <li>Open DevTools (F12) → Application/Storage → Cookies</li>
-                                <li>Find <code>__Secure-next-auth.session-token</code></li>
-                                <li>Copy the value and paste it here</li>
-                            </ol>
-                            <button type="submit">Log In with Cookie</button>
-                            <div id="cookie-error" class="error"></div>
-                        </form>
-
-                        <div class="login-status" id="login-status"></div>
                     </div>
                 </div>
             </div>

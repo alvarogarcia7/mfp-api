@@ -209,79 +209,149 @@ body {
 
 /* Calorie Summary */
 .calorie-summary {
-    background: white;
-    padding: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 24px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    box-shadow: 0 8px 16px rgba(102, 126, 234, 0.15);
+    color: white;
+}
+
+.summary-header {
+    margin-bottom: 16px;
+}
+
+.summary-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: white;
+}
+
+.calorie-display {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 16px;
     border-radius: 8px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 16px;
+    backdrop-filter: blur(10px);
 }
 
-.date-header {
-    font-size: 14px;
-    color: #999;
-    margin-bottom: 15px;
+.progress-bar-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
-.calorie-bar {
-    margin-bottom: 20px;
+.bar-info {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    font-size: 13px;
 }
 
-.bar-labels {
+.bar-row {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 8px;
-    font-size: 12px;
-    color: #666;
+    align-items: center;
 }
 
-.bar-container {
+.bar-row .label-consumed,
+.bar-row .label-goal {
+    opacity: 0.9;
+    font-weight: 500;
+}
+
+.bar-row .value-consumed,
+.bar-row .value-goal {
+    font-weight: 700;
+    font-size: 16px;
+}
+
+.progress-container {
+    margin: 8px 0;
+}
+
+.progress-bar {
     position: relative;
-    height: 24px;
-    background: #f0f0f0;
-    border-radius: 12px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 14px;
     overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-.eaten-bar {
+.progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, #667eea, #764ba2);
-    border-radius: 12px;
-    transition: width 0.3s;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
+    border-radius: 14px;
+    transition: width 0.4s ease;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
-.goal-marker {
+.goal-line {
     position: absolute;
     top: 0;
-    width: 3px;
+    width: 2px;
     height: 100%;
-    background: #333;
-    opacity: 0.5;
+    background: white;
+    opacity: 0.7;
+}
+
+.bar-remaining {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    opacity: 0.95;
+}
+
+.bar-remaining .value {
+    font-size: 16px;
+    font-weight: 700;
 }
 
 .calorie-stats {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 15px;
-    padding-top: 15px;
-    border-top: 1px solid #eee;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .stat {
-    text-align: center;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    text-align: left;
+}
+
+.stat-icon {
+    font-size: 20px;
+    min-width: 24px;
+}
+
+.stat-content {
+    display: flex;
+    flex-direction: column;
 }
 
 .stat .label {
-    display: block;
-    font-size: 12px;
-    color: #999;
-    margin-bottom: 5px;
+    font-size: 11px;
+    opacity: 0.8;
+    margin: 0;
+    font-weight: 500;
 }
 
 .stat .value {
-    display: block;
-    font-size: 24px;
-    font-weight: bold;
-    color: #667eea;
+    font-size: 14px;
+    font-weight: 700;
+    color: white;
+    margin: 0;
 }
 
 /* Food Input */
@@ -1402,4 +1472,49 @@ body {
     background: #667eea;
     color: white;
     border-color: #667eea;
+}
+
+/* Notifications */
+@keyframes slideIn {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+}
+
+.notification {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.notification-success {
+    background: #d4edda;
+    color: #155724;
+    border-color: #c3e6cb;
+}
+
+.notification-warning {
+    background: #fff3cd;
+    color: #856404;
+    border-color: #ffeaa7;
+}
+
+.notification-error {
+    background: #f8d7da;
+    color: #721c24;
+    border-color: #f5c6cb;
 }
