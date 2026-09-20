@@ -35,7 +35,7 @@ RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def fetch_and_save_user_goals(client: mfp_client.CurlCffiClient, username: str) -> str:
-    """Fetch user goals and save to disk.
+    """Fetch user goals via API and save to disk.
 
     Args:
         client: Authenticated MFP client
@@ -47,62 +47,68 @@ def fetch_and_save_user_goals(client: mfp_client.CurlCffiClient, username: str) 
     logger.info(f"Fetching user goals for {username}...")
 
     try:
-        # Fetch user profile
-        user_profile = client.get_user_profile()
+        # Fetch user goals via API endpoint
+        # GET /api/user/user_profile returns user's goal settings
+        response = client.session.get(
+            "https://www.myfitnesspal.com/api/user/user_profile",
+            headers={"Content-Type": "application/json"}
+        )
+        response.raise_for_status()
+        api_data = response.json()
         logger.info(f"✅ Fetched user profile: {username}")
 
-        # Extract goals from profile
+        # Extract goals from API response
         goals_data = {
             "username": username,
             "fetched_at": datetime.now().isoformat(),
             "goals": {
                 "calories": {
-                    "value": user_profile.goals.calories if hasattr(user_profile.goals, 'calories') else 2000,
+                    "value": api_data.get("daily_goals", {}).get("calories", 2000),
                     "unit": "kcal"
                 },
                 "protein": {
-                    "value": user_profile.goals.protein if hasattr(user_profile.goals, 'protein') else 50,
+                    "value": api_data.get("daily_goals", {}).get("protein", 50),
                     "unit": "g"
                 },
                 "carbohydrates": {
-                    "value": user_profile.goals.carbohydrates if hasattr(user_profile.goals, 'carbohydrates') else 300,
+                    "value": api_data.get("daily_goals", {}).get("carbohydrates", 300),
                     "unit": "g"
                 },
                 "fat": {
-                    "value": user_profile.goals.fat if hasattr(user_profile.goals, 'fat') else 65,
+                    "value": api_data.get("daily_goals", {}).get("fat", 65),
                     "unit": "g"
                 },
                 "fiber": {
-                    "value": user_profile.goals.fiber if hasattr(user_profile.goals, 'fiber') else 25,
+                    "value": api_data.get("daily_goals", {}).get("fiber", 25),
                     "unit": "g"
                 },
                 "sodium": {
-                    "value": user_profile.goals.sodium if hasattr(user_profile.goals, 'sodium') else 2300,
+                    "value": api_data.get("daily_goals", {}).get("sodium", 2300),
                     "unit": "mg"
                 },
                 "sugar": {
-                    "value": user_profile.goals.sugar if hasattr(user_profile.goals, 'sugar') else 50,
+                    "value": api_data.get("daily_goals", {}).get("sugar", 50),
                     "unit": "g"
                 },
                 "cholesterol": {
-                    "value": user_profile.goals.cholesterol if hasattr(user_profile.goals, 'cholesterol') else 300,
+                    "value": api_data.get("daily_goals", {}).get("cholesterol", 300),
                     "unit": "mg"
                 },
                 "saturated_fat": {
-                    "value": user_profile.goals.saturated_fat if hasattr(user_profile.goals, 'saturated_fat') else 20,
+                    "value": api_data.get("daily_goals", {}).get("saturated_fat", 20),
                     "unit": "g"
                 },
             },
             "preferences": {
-                "diary_preference": getattr(user_profile, 'diary_preference', None),
-                "locale": getattr(user_profile, 'locale', 'en_US'),
+                "diary_preference": api_data.get("diary_preference"),
+                "locale": api_data.get("locale", "en_US"),
             },
             "profile": {
-                "age": getattr(user_profile, 'age', None),
-                "gender": getattr(user_profile, 'gender', None),
-                "height": getattr(user_profile, 'height', None),
-                "weight": getattr(user_profile, 'weight', None),
-                "activity_level": getattr(user_profile, 'activity_level', None),
+                "age": api_data.get("age"),
+                "gender": api_data.get("gender"),
+                "height": api_data.get("height"),
+                "weight": api_data.get("weight"),
+                "activity_level": api_data.get("activity_level"),
             }
         }
 
