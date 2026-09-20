@@ -2,14 +2,14 @@
 """CLI script to download raw Polar Flow calendar events data.
 
 Downloads calendar events for a date range and saves raw JSON to disk.
-Credentials are loaded from .env.local (POLAR_FLOW_COOKIE).
+Credentials extracted from .env.polar.request.* file (via extract_cookie.py).
 
 Usage:
     python cli_fetch_polar_data.py --today
     python cli_fetch_polar_data.py --last-two-weeks
     python cli_fetch_polar_data.py --last-month
     python cli_fetch_polar_data.py --range-start 2026-09-01 --range-end 2026-09-15
-    python cli_fetch_polar_data.py --cookie <token> --today  # Override .env.local
+    python cli_fetch_polar_data.py --cookie <token> --today  # Override extracted cookie
 """
 
 import argparse
@@ -21,6 +21,9 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from dotenv import load_dotenv
 from curl_cffi import requests as curl_cffi_requests
+
+# Import extract_cookie utility
+from .extract_cookie import extract_cookie_from_curl
 
 # Configure logging
 logging.basicConfig(
@@ -35,6 +38,36 @@ RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # Polar Flow API
 POLAR_API_BASE = "https://flow.polar.com"
+
+
+def extract_polar_cookie_from_request() -> str | None:
+    """Extract POLAR_FLOW_COOKIE from .env.polar.request.* file.
+
+    Looks for .env.polar.request.local or .env.polar.request.example.
+    Uses extract_cookie_from_curl to extract FLOW_SESSION cookie.
+
+    Returns:
+        Cookie string if found, None otherwise
+    """
+    root_path = Path(__file__).parent.parent.parent
+    request_files = [
+        root_path / ".env.polar.request.local",
+        root_path / ".env.polar.request.example",
+    ]
+
+    for request_file in request_files:
+        if request_file.exists():
+            try:
+                with open(request_file, 'r') as f:
+                    curl_command = f.read()
+                cookie = extract_cookie_from_curl(curl_command)
+                if cookie:
+                    logger.debug(f"Extracted Polar cookie from {request_file.name}")
+                    return cookie
+            except Exception as e:
+                logger.debug(f"Failed to extract cookie from {request_file.name}: {e}")
+
+    return None
 
 
 def get_last_entry_date() -> date | None:
@@ -272,13 +305,13 @@ def main():
 
     parser = argparse.ArgumentParser(
         description="Download raw calendar events data from Polar Flow and save to disk",
-        epilog="Credentials are loaded from .env.local. Use --cookie to override."
+        epilog="Credentials extracted from .env.polar.request.* file. Use --cookie to override."
     )
 
-    # Authentication (optional if .env.local is set)
+    # Authentication (extracted from .env.polar.request.* or override)
     parser.add_argument(
         "--cookie",
-        help="Polar Flow session cookie (overrides .env.local POLAR_FLOW_COOKIE)"
+        help="Polar Flow session cookie (overrides extracted cookie from .env.polar.request.* file)"
     )
 
     # Date range
@@ -315,24 +348,21 @@ def main():
 
     args = parser.parse_args()
 
-    # Get cookie from args or environment
-    cookie = args.cookie or os.getenv("POLAR_FLOW_COOKIE")
+    # Get cookie from: args > extracted from .env.polar.request.* > fallback to .env.local
+    cookie = args.cookie or extract_polar_cookie_from_request() or os.getenv("POLAR_FLOW_COOKIE")
 
     if not cookie:
         logger.error("❌ Polar Flow session cookie not found")
-        logger.error("   Set POLAR_FLOW_COOKIE in .env.local or use --cookie argument")
         logger.error("")
-        logger.error("   To get your full cookie string (includes FLOW_SESSION, PLAY_SESSION_FLOW, etc):")
+        logger.error("   Extract cookie from .env.polar.request.* file:")
         logger.error("   1. Log in to https://flow.polar.com/")
-        logger.error("   2. Open DevTools (F12) → Network → select any API request to /api/diary/*")
-        logger.error("   3. In the Request Headers section, copy the entire 'Cookie' header value")
-        logger.error("   4. Paste into .env.local as: POLAR_FLOW_COOKIE=<full_cookie_string>")
+        logger.error("   2. Open DevTools (F12) → Network tab")
+        logger.error("   3. Find an API request (e.g., /api/training/history)")
+        logger.error("   4. Right-click → Copy → Copy as cURL")
+        logger.error("   5. Paste into .env.polar.request.local")
+        logger.error("   6. Run: python -m backend.polar.extract_cookie .env.polar.request.local")
         logger.error("")
-        logger.error("   The cookie must include:")
-        logger.error("   - FLOW_SESSION=<jwt_token>")
-        logger.error("   - PLAY_SESSION_FLOW=<session_token>")
-        logger.error("   - AWSALB=<load_balancer_token>")
-        logger.error("   - AWSALBCORS=<cors_token>")
+        logger.error("   Or use --cookie argument to override")
         sys.exit(1)
 
     # Create session with authentication
