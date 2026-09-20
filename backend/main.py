@@ -17,6 +17,9 @@ from typing import Annotated
 from fastapi import FastAPI, HTTPException, Header, Body
 from fastapi.staticfiles import StaticFiles
 
+from mfp.diary_repository import DiaryRepository
+from mfp.meal_schedule import MealSchedule
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -32,6 +35,7 @@ _food_entries: dict = {}
 # Database file paths
 FOOD_DB_FILE = Path(__file__).parent / ".food_cache.json"
 EXERCISE_DB_FILE = Path(__file__).parent / ".exercise_cache.json"
+DIARY_DB_FILE = Path(__file__).parent / ".diary_cache.json"
 FOOD_SCHEMA_FILE = Path(__file__).parent / "food_schema.json"
 
 
@@ -205,6 +209,64 @@ async def remove_food_entry(date_str: str, meal: str, index: int):
     except Exception as e:
         logger.error(f"Error removing food entry: {e}")
         raise HTTPException(status_code=500, detail=f"Error removing entry: {e}")
+
+
+# ============================================================================
+# Diary Cache (Read-only from local cache)
+# ============================================================================
+
+@app.get("/api/diary-entries")
+async def get_diary_entries(date_str: str | None = None):
+    """Get diary entries from local diary cache.
+
+    If date_str not provided, returns entries for today.
+    Format: YYYY-MM-DD
+    """
+    if date_str is None:
+        date_str = date.today().isoformat()
+
+    try:
+        repo = DiaryRepository(DIARY_DB_FILE)
+        target_date = date.fromisoformat(date_str)
+        entry = repo.load_entries_for_date(target_date)
+
+        if not entry:
+            return {
+                "date": date_str,
+                "meals": {"breakfast": [], "lunch": [], "dinner": [], "snacks": []},
+                "totals": {},
+                "has_data": False
+            }
+
+        return {
+            "date": date_str,
+            "meals": entry.get("meals", {}),
+            "totals": entry.get("totals", {}),
+            "metadata": entry.get("metadata", {}),
+            "has_data": True
+        }
+    except Exception as e:
+        logger.error(f"Error loading diary entries: {e}")
+        raise HTTPException(status_code=500, detail=f"Error loading entries: {e}")
+
+
+@app.get("/api/meal-schedule")
+async def get_meal_schedule():
+    """Get meal schedule configuration and current meal.
+
+    Returns the hardcoded meal schedule and what meal is current.
+    """
+    try:
+        current_meal = MealSchedule.get_current_meal()
+        schedule_info = MealSchedule.get_schedule_info()
+
+        return {
+            "current_meal": current_meal,
+            "schedule": schedule_info
+        }
+    except Exception as e:
+        logger.error(f"Error getting meal schedule: {e}")
+        raise HTTPException(status_code=500, detail=f"Error: {e}")
 
 
 # ============================================================================

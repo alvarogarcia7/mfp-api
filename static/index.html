@@ -113,8 +113,16 @@
                 <div id="food-entries-tab" class="tab-content">
                     <h2>Today's Food Log</h2>
                     <div class="date-selector">
-                        <input type="date" id="entry-date" />
-                        <button id="load-date-btn" class="action-btn">Load</button>
+                        <div class="date-input-row">
+                            <input type="date" id="entry-date" />
+                            <button id="load-date-btn" class="action-btn">Load</button>
+                        </div>
+                        <div class="date-nav-buttons">
+                            <button id="date-prev-week-btn" class="date-nav-btn" title="1 week ago">&laquo; 1w</button>
+                            <button id="date-prev-day-btn" class="date-nav-btn" title="Yesterday">&lt;</button>
+                            <button id="date-next-day-btn" class="date-nav-btn" title="Tomorrow">&gt;</button>
+                            <button id="date-next-week-btn" class="date-nav-btn" title="1 week later">1w &raquo;</button>
+                        </div>
                     </div>
 
                     <!-- Calorie Summary (only when logged in) -->

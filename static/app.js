@@ -24,6 +24,12 @@ const entryDate = document.getElementById("entry-date");
 const loadDateBtn = document.getElementById("load-date-btn");
 const caloriesSummary = document.getElementById("calorie-summary");
 
+// Date navigation buttons
+const datePrevWeekBtn = document.getElementById("date-prev-week-btn");
+const datePrevDayBtn = document.getElementById("date-prev-day-btn");
+const dateNextDayBtn = document.getElementById("date-next-day-btn");
+const dateNextWeekBtn = document.getElementById("date-next-week-btn");
+
 let currentFoodItems = [];
 let polarFlowActivities = [];
 let selectedPolarActivities = [];
@@ -80,6 +86,15 @@ document.addEventListener("DOMContentLoaded", () => {
     addAllBtn.addEventListener("click", addAllSelected);
     logoutBtn.addEventListener("click", handleLogout);
     loadDateBtn.addEventListener("click", loadFoodEntries);
+
+    // Date navigation buttons
+    if (datePrevWeekBtn) datePrevWeekBtn.addEventListener("click", () => changeDate(-7));
+    if (datePrevDayBtn) datePrevDayBtn.addEventListener("click", () => changeDate(-1));
+    if (dateNextDayBtn) dateNextDayBtn.addEventListener("click", () => changeDate(1));
+    if (dateNextWeekBtn) dateNextWeekBtn.addEventListener("click", () => changeDate(7));
+
+    // Pre-fill meal select based on current time
+    initializeMealSelect();
 
     // Login sub-tabs
     document.querySelectorAll("[data-subtab]").forEach(btn => {
@@ -333,18 +348,45 @@ async function loadFoodEntries() {
         const dateStr = entryDate.value;
         console.log(`📥 Loading entries for ${dateStr}...`);
 
-        if (sessionId) {
-            const response = await fetch(`/api/food-entries?date_str=${dateStr}`, {
+        // Try to load from diary cache first
+        const response = await fetch(`/api/diary-entries?date_str=${dateStr}`);
+        const data = await response.json();
+        foodEntries = data.meals || {};
+
+        // If no diary data, try online API
+        if (!data.has_data && sessionId) {
+            const onlineResponse = await fetch(`/api/food-entries?date_str=${dateStr}`, {
                 headers: { "Authorization": `Bearer ${sessionId}` }
             });
-            const data = await response.json();
-            foodEntries = data.meals || {};
+            const onlineData = await onlineResponse.json();
+            foodEntries = onlineData.meals || {};
         }
 
         displayFoodEntries(foodEntries);
     } catch (err) {
-        console.warn("Note: Food entries not available online, using local cache");
+        console.warn("Note: Food entries not available, using local data");
         displayFoodEntries({});
+    }
+}
+
+function changeDate(dayOffset) {
+    const currentDate = new Date(entryDate.valueAsDate);
+    currentDate.setDate(currentDate.getDate() + dayOffset);
+    entryDate.valueAsDate = currentDate;
+    loadFoodEntries();
+}
+
+async function initializeMealSelect() {
+    try {
+        const response = await fetch("/api/meal-schedule");
+        const data = await response.json();
+        const currentMeal = data.current_meal;
+        mealSelect.value = currentMeal;
+        window.currentMeal = currentMeal;
+        console.log(`🍽️ Set meal to: ${currentMeal}`);
+    } catch (err) {
+        console.warn("Could not determine meal from schedule, defaulting to snacks");
+        mealSelect.value = "snacks";
     }
 }
 
