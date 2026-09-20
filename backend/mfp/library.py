@@ -15,19 +15,22 @@ logger = logging.getLogger(__name__)
 def parse_date_range(args) -> tuple[date, date]:
     """Parse date range from CLI arguments.
 
-    Supports: --today, --last-two-weeks, --last-month, --range-start/--range-end
+    Supports: --today, --last-week, --last-two-weeks, --last-month, --range-start/--range-end
     """
     today = date.today()
 
     if args.today:
         return today, today
-    elif args.last_two_weeks:
+    elif getattr(args, 'last_week', False):
+        start = today - timedelta(days=7)
+        return start, today
+    elif getattr(args, 'last_two_weeks', False):
         start = today - timedelta(days=14)
         return start, today
-    elif args.last_month:
+    elif getattr(args, 'last_month', False):
         start = today - timedelta(days=30)
         return start, today
-    elif args.range_start and args.range_end:
+    elif getattr(args, 'range_start', None) and getattr(args, 'range_end', None):
         try:
             start = date.fromisoformat(args.range_start)
             end = date.fromisoformat(args.range_end)
@@ -37,7 +40,7 @@ def parse_date_range(args) -> tuple[date, date]:
         except ValueError as e:
             raise ValueError(f"Invalid date format: {e}. Use YYYY-MM-DD")
     else:
-        raise ValueError("Must specify one of: --today, --last-two-weeks, --last-month, or --range-start/--range-end")
+        raise ValueError("Must specify one of: --today, --last-week, --last-two-weeks, --last-month, or --range-start/--range-end")
 
 
 def load_schema(schema_file: Path) -> dict:

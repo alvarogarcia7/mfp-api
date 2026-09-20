@@ -177,22 +177,7 @@ def main():
 
     # Parse date range
     try:
-        # Handle --last-week which isn't in library
-        if args.last_week:
-            from datetime import timedelta
-            today = date.today()
-            start_date = today - timedelta(days=7)
-            end_date = today
-        else:
-            # Create a simple args object for library.parse_date_range
-            class DateArgs:
-                today = args.today
-                last_two_weeks = args.last_two_weeks
-                last_month = args.last_month
-                range_start = args.range_start
-                range_end = args.range_end
-
-            start_date, end_date = library.parse_date_range(DateArgs())
+        start_date, end_date = library.parse_date_range(args)
     except ValueError as e:
         logger.error(f"❌ {e}")
         sys.exit(1)
