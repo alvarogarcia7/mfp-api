@@ -15,7 +15,7 @@ import json
 import logging
 import os
 import sys
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -71,30 +71,55 @@ def fetch_and_save_daily_diary(client: mfp_client.CurlCffiClient, start_date: da
 
                     # Extract foods from each meal
                     for entry in meal.entries:
-                        food_entry = {
-                            "name": getattr(entry, "name", ""),
-                            "quantity": library.safe_float(getattr(entry, "quantity", None)),
-                            "unit": getattr(entry, "unit", ""),
-                            "calories": library.safe_int(getattr(entry.totals, "calories", 0)),
-                            "protein": library.safe_float(getattr(entry.totals, "protein", None)),
-                            "carbs": library.safe_float(getattr(entry.totals, "carbs", None)),
-                            "fat": library.safe_float(getattr(entry.totals, "fat", None)),
-                        }
+                        # Handle both dict and object-style access for entry totals
+                        entry_totals = getattr(entry, "totals", {})
+                        if isinstance(entry_totals, dict):
+                            food_entry = {
+                                "name": getattr(entry, "name", ""),
+                                "quantity": library.safe_float(getattr(entry, "quantity", None)),
+                                "unit": getattr(entry, "unit", ""),
+                                "calories": library.safe_int(entry_totals.get("calories", 0)),
+                                "protein": library.safe_float(entry_totals.get("protein", None)),
+                                "carbs": library.safe_float(entry_totals.get("carbs", None)),
+                                "fat": library.safe_float(entry_totals.get("fat", None)),
+                            }
+                        else:
+                            food_entry = {
+                                "name": getattr(entry, "name", ""),
+                                "quantity": library.safe_float(getattr(entry, "quantity", None)),
+                                "unit": getattr(entry, "unit", ""),
+                                "calories": library.safe_int(getattr(entry_totals, "calories", 0)),
+                                "protein": library.safe_float(getattr(entry_totals, "protein", None)),
+                                "carbs": library.safe_float(getattr(entry_totals, "carbs", None)),
+                                "fat": library.safe_float(getattr(entry_totals, "fat", None)),
+                            }
                         meal_data["entries"].append(food_entry)
 
                     meals_data.append(meal_data)
 
                 # Create daily diary entry
+                # Handle both dict and object-style access for totals
+                totals = diary.totals if diary.totals else {}
+                if isinstance(totals, dict):
+                    daily_totals = {
+                        "calories": library.safe_int(totals.get("calories", 0)),
+                        "protein": library.safe_float(totals.get("protein", 0.0)),
+                        "carbs": library.safe_float(totals.get("carbs", 0.0)),
+                        "fat": library.safe_float(totals.get("fat", 0.0)),
+                    }
+                else:
+                    daily_totals = {
+                        "calories": library.safe_int(getattr(totals, "calories", 0)),
+                        "protein": library.safe_float(getattr(totals, "protein", 0.0)),
+                        "carbs": library.safe_float(getattr(totals, "carbs", 0.0)),
+                        "fat": library.safe_float(getattr(totals, "fat", 0.0)),
+                    }
+
                 daily_entry = {
                     "date": current_date.isoformat(),
                     "synced_at": datetime.now().isoformat(),
                     "meals": meals_data,
-                    "totals": {
-                        "calories": library.safe_int(diary.totals.calories) if diary.totals else 0,
-                        "protein": library.safe_float(diary.totals.protein) if diary.totals else 0.0,
-                        "carbs": library.safe_float(diary.totals.carbs) if diary.totals else 0.0,
-                        "fat": library.safe_float(diary.totals.fat) if diary.totals else 0.0,
-                    },
+                    "totals": daily_totals,
                     "meal_count": len(meals_data),
                     "total_foods": sum(len(m["entries"]) for m in meals_data),
                 }
@@ -103,10 +128,10 @@ def fetch_and_save_daily_diary(client: mfp_client.CurlCffiClient, start_date: da
                 logger.debug(f"No diary data for {current_date}")
 
             # Move to next date
-            current_date = date(current_date.year, current_date.month, current_date.day + 1)
+            current_date = current_date + timedelta(days=1)
         except Exception as e:
             logger.error(f"Error fetching diary for {current_date}: {e}", exc_info=True)
-            current_date = date(current_date.year, current_date.month, current_date.day + 1)
+            current_date = current_date + timedelta(days=1)
 
     logger.info(f"Fetched {len(diary_entries)} daily diary entries")
 
