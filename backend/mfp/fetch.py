@@ -17,14 +17,13 @@ import json
 import logging
 import os
 import sys
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from pathlib import Path
 from dotenv import load_dotenv
-from jsonschema import validate, ValidationError
 
 from ..mfp_auth import login_mfp_password, login_mfp_cookie
 from ..vendor import mfp_client
-from . import unit_cache, diary_sync
+from . import library, unit_cache, diary_sync
 
 # Configure logging
 logging.basicConfig(
@@ -41,32 +40,6 @@ RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
 MFP_FOOD_SCHEMA_FILE = Path(__file__).parent.parent / "mfp_food_schema.json"
 
 
-def parse_date_range(args) -> tuple[date, date]:
-    """Parse date range from CLI arguments."""
-    today = date.today()
-
-    if args.today:
-        return today, today
-    elif args.last_two_weeks:
-        start = today - timedelta(days=14)
-        return start, today
-    elif args.last_month:
-        start = today - timedelta(days=30)
-        return start, today
-    elif args.range_start and args.range_end:
-        try:
-            start = date.fromisoformat(args.range_start)
-            end = date.fromisoformat(args.range_end)
-            if start > end:
-                logger.error("range-start must be before range-end")
-                sys.exit(1)
-            return start, end
-        except ValueError as e:
-            logger.error(f"Invalid date format: {e}. Use YYYY-MM-DD")
-            sys.exit(1)
-    else:
-        logger.error("Must specify one of: --today, --last-two-weeks, --last-month, or --range-start/--range-end")
-        sys.exit(1)
 
 
 def fetch_and_save_food_data(client, start_date: date, end_date: date) -> str:
@@ -121,16 +94,16 @@ def fetch_and_save_food_data(client, start_date: date, end_date: date) -> str:
                             "download_url": raw_data.get("download_url"),
                             "measurement_unit_url": raw_data.get("measurement_unit_url"),
                             "raw": raw_data,
-                            "calories": _safe_float(entry.totals.get("calories")),
-                            "protein": _safe_float(entry.totals.get("protein")),
-                            "carbs": _safe_float(entry.totals.get("carbs")),
-                            "fat": _safe_float(entry.totals.get("fat")),
-                            "fiber": _safe_float(entry.totals.get("fiber")),
-                            "sugar": _safe_float(entry.totals.get("sugar")),
-                            "sodium": _safe_float(entry.totals.get("sodium")),
-                            "cholesterol": _safe_float(entry.totals.get("cholesterol")),
-                            "saturated_fat": _safe_float(entry.totals.get("saturated_fat")),
-                            "potassium": _safe_float(entry.totals.get("potassium")),
+                            "calories": library.safe_float(entry.totals.get("calories")),
+                            "protein": library.safe_float(entry.totals.get("protein")),
+                            "carbs": library.safe_float(entry.totals.get("carbs")),
+                            "fat": library.safe_float(entry.totals.get("fat")),
+                            "fiber": library.safe_float(entry.totals.get("fiber")),
+                            "sugar": library.safe_float(entry.totals.get("sugar")),
+                            "sodium": library.safe_float(entry.totals.get("sodium")),
+                            "cholesterol": library.safe_float(entry.totals.get("cholesterol")),
+                            "saturated_fat": library.safe_float(entry.totals.get("saturated_fat")),
+                            "potassium": library.safe_float(entry.totals.get("potassium")),
                         }
 
         except Exception as e:
@@ -144,25 +117,11 @@ def fetch_and_save_food_data(client, start_date: date, end_date: date) -> str:
     logger.info(f"Extracted {len(all_foods)} unique foods from {start_date} to {end_date}")
 
     # Load and validate against schema
-    schema = _load_food_schema()
+    schema = library.load_schema(MFP_FOOD_SCHEMA_FILE)
     foods_list = list(all_foods.values())
 
     # Validate each food against schema and mark validity
-    valid_count = 0
-    invalid_count = 0
-    for food in foods_list:
-        try:
-            validate(instance=food, schema=schema)
-            food["valid"] = True
-            valid_count += 1
-        except ValidationError as e:
-            logger.warning(f"Food '{food.get('name')}' failed schema validation: {e.message}")
-            food["valid"] = False
-            food["validation_error"] = e.message
-            invalid_count += 1
-
-    if invalid_count > 0:
-        logger.warning(f"Marked {invalid_count} invalid foods (missing or invalid fields)")
+    valid_count, invalid_count = library.validate_data(foods_list, schema, "food")
 
     # Save to disk
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -187,25 +146,6 @@ def fetch_and_save_food_data(client, start_date: date, end_date: date) -> str:
     return str(filepath)
 
 
-def _load_food_schema() -> dict:
-    """Load MFP Food Fact schema from file."""
-    try:
-        with open(MFP_FOOD_SCHEMA_FILE, 'r') as f:
-            return json.load(f)
-    except Exception as e:
-        logger.error(f"Failed to load MFP food schema: {e}")
-        # Return a minimal schema to avoid complete failure
-        return {"type": "object"}
-
-
-def _safe_float(value) -> float:
-    """Convert value to float, return 0 if None/invalid."""
-    if value is None:
-        return 0.0
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return 0.0
 
 
 def _get_measurement(entry) -> dict:
@@ -360,7 +300,11 @@ def main():
         sys.exit(1)
 
     # Parse date range
-    start_date, end_date = parse_date_range(args)
+    try:
+        start_date, end_date = library.parse_date_range(args)
+    except ValueError as e:
+        logger.error(f"❌ {e}")
+        sys.exit(1)
     logger.info(f"Date range: {start_date} to {end_date}")
 
     # Fetch and save data
