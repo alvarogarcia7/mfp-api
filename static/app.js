@@ -21,6 +21,7 @@ const searchResults = document.getElementById("search-results");
 const resultsList = document.getElementById("results-list");
 const selectAllBtn = document.getElementById("select-all-btn");
 const deselectAllBtn = document.getElementById("deselect-all-btn");
+const invertSelectionBtn = document.getElementById("invert-selection-btn");
 const addAllBtn = document.getElementById("add-all-btn");
 const entryDate = document.getElementById("entry-date");
 const caloriesSummary = document.getElementById("calorie-summary");
@@ -36,6 +37,7 @@ let polarFlowActivities = [];
 let selectedPolarActivities = [];
 let currentFoodView = "table";  // "table" or "cards"
 let filteredFoodDatabase = [];
+let lastCheckedCheckbox = null;  // For shift+click range selection
 
 // Modal elements
 const loadMoreFoodsBtn = document.getElementById("load-more-foods-btn");
@@ -84,6 +86,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     selectAllBtn.addEventListener("click", selectAllResults);
     deselectAllBtn.addEventListener("click", deselectAllResults);
+    if (invertSelectionBtn) invertSelectionBtn.addEventListener("click", invertSelection);
     addAllBtn.addEventListener("click", addAllSelected);
     logoutBtn.addEventListener("click", handleLogout);
 
@@ -581,6 +584,7 @@ function handleSearch() {
 
 function showResults() {
     resultsList.innerHTML = "";
+    lastCheckedCheckbox = null;
 
     currentFoodItems.forEach((item, itemIdx) => {
         const itemDiv = document.createElement("div");
@@ -609,13 +613,41 @@ function showResults() {
             checkbox.checked = (foodIdx === 0);
             checkbox.dataset.itemIdx = itemIdx;
             checkbox.dataset.foodIdx = foodIdx;
-            checkbox.addEventListener("change", (e) => {
-                if (e.target.checked) {
-                    item.selected = food;
-                    resultsList.querySelectorAll(`input[data-itemIdx="${itemIdx}"]`).forEach(cb => {
-                        if (cb !== checkbox) cb.checked = false;
-                    });
+            checkbox.addEventListener("click", (e) => {
+                // Handle shift+click range selection
+                if (e.shiftKey && lastCheckedCheckbox) {
+                    const allCheckboxes = Array.from(resultsList.querySelectorAll('input[type="checkbox"]'));
+                    const lastIdx = allCheckboxes.indexOf(lastCheckedCheckbox);
+                    const currentIdx = allCheckboxes.indexOf(checkbox);
+                    const [start, end] = lastIdx < currentIdx ? [lastIdx, currentIdx] : [currentIdx, lastIdx];
+
+                    for (let i = start; i <= end; i++) {
+                        const cb = allCheckboxes[i];
+                        const itemIdx = parseInt(cb.dataset.itemIdx);
+                        const foodIdx = parseInt(cb.dataset.foodIdx);
+                        if (currentFoodItems[itemIdx] && currentFoodItems[itemIdx].parsed) {
+                            const food = currentFoodItems[itemIdx].parsed.foods[foodIdx];
+                            if (checkbox.checked) {
+                                cb.checked = true;
+                                currentFoodItems[itemIdx].selected = food;
+                            } else {
+                                cb.checked = false;
+                                currentFoodItems[itemIdx].selected = null;
+                            }
+                        }
+                    }
+                } else {
+                    // Single selection within item (only one food per item)
+                    if (checkbox.checked) {
+                        currentFoodItems[itemIdx].selected = food;
+                        resultsList.querySelectorAll(`input[data-itemIdx="${itemIdx}"]`).forEach(cb => {
+                            if (cb !== checkbox) cb.checked = false;
+                        });
+                    } else {
+                        currentFoodItems[itemIdx].selected = null;
+                    }
                 }
+                lastCheckedCheckbox = checkbox;
             });
 
             const content = document.createElement("div");
@@ -654,6 +686,26 @@ function deselectAllResults() {
     resultsList.querySelectorAll('input[type="checkbox"]').forEach(cb => {
         cb.checked = false;
     });
+    currentFoodItems.forEach(item => item.selected = null);
+}
+
+function invertSelection() {
+    resultsList.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.checked = !cb.checked;
+        const itemIdx = parseInt(cb.dataset.itemIdx);
+        const foodIdx = parseInt(cb.dataset.foodIdx);
+        if (currentFoodItems[itemIdx] && currentFoodItems[itemIdx].parsed) {
+            const food = currentFoodItems[itemIdx].parsed.foods[foodIdx];
+            if (cb.checked) {
+                currentFoodItems[itemIdx].selected = food;
+                resultsList.querySelectorAll(`input[data-itemIdx="${itemIdx}"]`).forEach(other => {
+                    if (other !== cb) other.checked = false;
+                });
+            } else {
+                currentFoodItems[itemIdx].selected = null;
+            }
+        }
+    });
 }
 
 async function addAllSelected() {
@@ -685,7 +737,9 @@ async function addAllSelected() {
             foodInput.value = "";
             searchResults.style.display = "none";
             currentFoodItems = [];
+            lastCheckedCheckbox = null;
             await loadFoodEntries();
+            await updateCalorieSummary();
             showNotification(`✅ ${successCount} food${successCount > 1 ? 's' : ''} added successfully!`, "success");
         } else {
             showNotification("⚠️ Foods could not be added. Please try again.", "error");
