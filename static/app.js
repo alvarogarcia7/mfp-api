@@ -380,9 +380,8 @@ async function initializeMealSelect() {
     try {
         const response = await fetch("/api/meal-schedule");
         const data = await response.json();
-        const currentMeal = data.current_meal;
+        currentMeal = data.current_meal;
         mealSelect.value = currentMeal;
-        window.currentMeal = currentMeal;
         console.log(`🍽️ Set meal to: ${currentMeal}`);
     } catch (err) {
         console.warn("Could not determine meal from schedule, defaulting to snacks");
