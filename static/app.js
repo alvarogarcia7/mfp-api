@@ -1253,10 +1253,9 @@ async function addQuickExercise() {
         kcalInput.value = "100";
         minutesInput.value = "30";
 
-        // Reload exercises
+        // Reload exercises and update display
         await loadAllExercises();
-        await loadExercisesForDate(entryDate.value);
-        await updateCalorieSummary();
+        await loadFoodEntries();
 
     } catch (err) {
         console.error("Error adding exercise:", err);
