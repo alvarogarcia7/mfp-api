@@ -20,6 +20,7 @@ from fastapi.staticfiles import StaticFiles
 
 import sys
 import importlib.util
+import jsonschema
 
 # Import diary modules without triggering mfp package __init__
 mfp_dir = Path(__file__).parent / "mfp"
@@ -53,6 +54,9 @@ class ExerciseCreate(BaseModel):
     calories: int
     duration: int
     distance: float = 0.0
+    sport_id: str | None = None
+    heart_rate: dict | None = None
+    source: str = "manual"
 
 
 # In-memory food entries: {date -> {meal -> [foods]}}
@@ -66,6 +70,7 @@ DIARY_DB_FILE = Path(__file__).parent / ".diary_cache.json"
 FOOD_ENTRIES_FILE = Path(__file__).parent / ".food_entries.json"
 USER_PROFILE_FILE = Path(__file__).parent / "data" / "user" / "profile.json"
 FOOD_SCHEMA_FILE = Path(__file__).parent / "food_schema.json"
+EXERCISE_SCHEMA_FILE = Path(__file__).parent / "exercise_schema.json"
 
 
 def _load_food_cache() -> list[dict] | None:
@@ -103,6 +108,42 @@ def _save_exercise_cache(exercises: list[dict]) -> None:
             json.dump(exercises, f, indent=2)
     except Exception as e:
         logger.error(f"Error saving exercise cache: {e}")
+
+
+def _load_exercise_schema() -> dict | None:
+    """Load exercise JSON schema from file."""
+    if not EXERCISE_SCHEMA_FILE.exists():
+        logger.warning(f"Exercise schema not found: {EXERCISE_SCHEMA_FILE}")
+        return None
+    try:
+        with open(EXERCISE_SCHEMA_FILE, 'r') as f:
+            return json.load(f)
+    except Exception as e:
+        logger.error(f"Error loading exercise schema: {e}")
+        return None
+
+
+def _validate_exercise(exercise: dict) -> tuple[bool, str | None]:
+    """Validate exercise against schema.
+
+    Returns:
+        Tuple of (is_valid, error_message)
+    """
+    schema = _load_exercise_schema()
+    if not schema:
+        logger.warning("Exercise schema not available, skipping validation")
+        return True, None
+
+    try:
+        jsonschema.validate(instance=exercise, schema=schema)
+        return True, None
+    except jsonschema.ValidationError as e:
+        error_msg = f"Validation error at {'.'.join(str(p) for p in e.path)}: {e.message}"
+        logger.error(f"Exercise validation failed: {error_msg}")
+        return False, error_msg
+    except jsonschema.SchemaError as e:
+        logger.error(f"Schema error: {e.message}")
+        return False, f"Schema error: {e.message}"
 
 
 def _safe_float(value) -> float:
@@ -449,8 +490,24 @@ async def add_exercise(exercise: ExerciseCreate):
             "calories": exercise.calories,
             "duration": exercise.duration,
             "distance": exercise.distance,
-            "created_at": datetime.now().isoformat()
+            "created_at": datetime.now().isoformat(),
+            "source": exercise.source
         }
+
+        # Add optional fields if provided
+        if exercise.sport_id:
+            new_exercise["sport_id"] = exercise.sport_id
+        elif exercise.name in ["HIIT", "Padel", "Running", "Lifting", "Walking"]:
+            new_exercise["sport_id"] = exercise.name
+
+        if exercise.heart_rate:
+            new_exercise["heart_rate"] = exercise.heart_rate
+
+        # Validate against schema
+        is_valid, error_msg = _validate_exercise(new_exercise)
+        if not is_valid:
+            logger.warning(f"Exercise validation failed: {error_msg}")
+            raise HTTPException(status_code=400, detail=f"Invalid exercise data: {error_msg}")
 
         # Add to list
         exercises.append(new_exercise)
