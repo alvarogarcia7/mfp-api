@@ -439,5 +439,25 @@
       "max": 175,
       "min": 120
     }
+  },
+  {
+    "date": "2026-09-15",
+    "name": "Running",
+    "calories": 180,
+    "duration": 25,
+    "distance": 0.0,
+    "created_at": "2026-09-21T05:54:35.497912",
+    "source": "manual",
+    "sport_id": "Running"
+  },
+  {
+    "date": "2026-09-25",
+    "name": "Padel",
+    "calories": 160,
+    "duration": 60,
+    "distance": 0.0,
+    "created_at": "2026-09-21T05:54:35.537052",
+    "source": "manual",
+    "sport_id": "Padel"
   }
 ]

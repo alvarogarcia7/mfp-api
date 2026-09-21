@@ -1897,9 +1897,25 @@ body {
 
 .exercise-form {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr auto;
-    gap: 16px;
+    grid-template-columns: 1fr 1fr 1fr 1fr auto;
+    gap: 12px;
     align-items: flex-end;
+}
+
+.exercise-date-input {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+    color: #333;
+}
+
+.exercise-date-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
 }
 
 .form-group {
@@ -1994,6 +2010,13 @@ body {
 .exercise-kcal-input[type=number],
 .exercise-minutes-input[type=number] {
     -moz-appearance: textfield;
+}
+
+@media (max-width: 1200px) {
+    .exercise-form {
+        grid-template-columns: 1fr 1fr 1fr auto;
+        gap: 12px;
+    }
 }
 
 @media (max-width: 1024px) {

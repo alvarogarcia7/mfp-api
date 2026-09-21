@@ -181,6 +181,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Quick exercise insert listeners
+    const exerciseDateInput = document.getElementById("exercise-date");
     const kcalInput = document.getElementById("exercise-kcal");
     const kcalMinus = document.getElementById("kcal-minus");
     const kcalPlus = document.getElementById("kcal-plus");
@@ -188,6 +189,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const minutesMinus = document.getElementById("minutes-minus");
     const minutesPlus = document.getElementById("minutes-plus");
     const exerciseAddBtn = document.getElementById("exercise-add-btn");
+
+    // Initialize exercise date to today
+    if (exerciseDateInput) {
+        exerciseDateInput.valueAsDate = new Date();
+    }
 
     if (kcalMinus) kcalMinus.addEventListener("click", () => adjustValue(kcalInput, -50));
     if (kcalPlus) kcalPlus.addEventListener("click", () => adjustValue(kcalInput, 50));
@@ -1196,13 +1202,20 @@ function adjustValue(input, delta, min = 0) {
 }
 
 async function addQuickExercise() {
+    const exerciseDateInput = document.getElementById("exercise-date");
     const sportSelect = document.getElementById("exercise-sport");
     const kcalInput = document.getElementById("exercise-kcal");
     const minutesInput = document.getElementById("exercise-minutes");
 
+    const dateStr = exerciseDateInput.value;
     const sport = sportSelect.value;
     const kcal = parseInt(kcalInput.value) || 0;
     const minutes = parseInt(minutesInput.value) || 1;
+
+    if (!dateStr) {
+        showNotification("Please select a date", "warning");
+        return;
+    }
 
     if (!sport) {
         showNotification("Please select a sport", "warning");
@@ -1223,9 +1236,6 @@ async function addQuickExercise() {
         const exerciseAddBtn = document.getElementById("exercise-add-btn");
         exerciseAddBtn.disabled = true;
         exerciseAddBtn.textContent = "Adding...";
-
-        const today = new Date();
-        const dateStr = today.toISOString().split('T')[0];
 
         const response = await fetch("/api/exercises/add", {
             method: "POST",
