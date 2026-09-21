@@ -42,6 +42,9 @@ let exercisesForDate = [];  // Exercises for the selected date
 let allExercises = [];  // All exercises from database
 let currentPeriod = "week";  // Current time period filter
 let customDateRange = null;  // Custom date range for exercises (if user selects dates)
+let exercisesPaginatedList = [];  // Current filtered exercises for pagination
+let currentExercisesPage = 1;  // Current page for exercises pagination
+const EXERCISES_PER_PAGE = 10;  // Items per page
 
 // Modal elements
 const loadMoreFoodsBtn = document.getElementById("load-more-foods-btn");
@@ -177,6 +180,29 @@ document.addEventListener("DOMContentLoaded", () => {
     if (tabNavBtn) {
         tabNavBtn.addEventListener("click", () => {
             loadAllExercises();
+        });
+    }
+
+    // Exercise pagination listeners
+    const exercisesPrevBtn = document.getElementById("exercises-prev-btn");
+    const exercisesNextBtn = document.getElementById("exercises-next-btn");
+
+    if (exercisesPrevBtn) {
+        exercisesPrevBtn.addEventListener("click", () => {
+            if (currentExercisesPage > 1) {
+                currentExercisesPage--;
+                displayPaginatedExercises();
+            }
+        });
+    }
+
+    if (exercisesNextBtn) {
+        exercisesNextBtn.addEventListener("click", () => {
+            const totalPages = Math.ceil(exercisesPaginatedList.length / EXERCISES_PER_PAGE);
+            if (currentExercisesPage < totalPages) {
+                currentExercisesPage++;
+                displayPaginatedExercises();
+            }
         });
     }
 
@@ -719,18 +745,33 @@ function updateOverviewStats(exercises) {
 }
 
 function displayAllExercises(exercises) {
+    // Store exercises for pagination and reset to page 1
+    exercisesPaginatedList = exercises;
+    currentExercisesPage = 1;
+    displayPaginatedExercises();
+}
+
+function displayPaginatedExercises() {
     const exercisesList = document.getElementById("exercises-list");
 
     if (!exercisesList) return;
 
-    if (exercises.length === 0) {
+    if (exercisesPaginatedList.length === 0) {
         exercisesList.innerHTML = '<div class="no-data">No exercises found for this period</div>';
+        updatePaginationControls();
         return;
     }
 
+    // Calculate pagination
+    const totalPages = Math.ceil(exercisesPaginatedList.length / EXERCISES_PER_PAGE);
+    const startIdx = (currentExercisesPage - 1) * EXERCISES_PER_PAGE;
+    const endIdx = startIdx + EXERCISES_PER_PAGE;
+    const pageExercises = exercisesPaginatedList.slice(startIdx, endIdx);
+
+    // Build HTML for current page
     let html = '<div class="exercises-items">';
 
-    exercises.forEach((exercise) => {
+    pageExercises.forEach((exercise) => {
         const date = exercise.date ? new Date(exercise.date) : null;
         const dateStr = date ? date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : '';
 
@@ -749,6 +790,32 @@ function displayAllExercises(exercises) {
 
     html += '</div>';
     exercisesList.innerHTML = html;
+
+    // Update pagination controls
+    updatePaginationControls();
+}
+
+function updatePaginationControls() {
+    const prevBtn = document.getElementById("exercises-prev-btn");
+    const nextBtn = document.getElementById("exercises-next-btn");
+    const pageInfo = document.getElementById("exercises-page-info");
+
+    if (!prevBtn || !nextBtn || !pageInfo) return;
+
+    const totalPages = Math.ceil(exercisesPaginatedList.length / EXERCISES_PER_PAGE);
+
+    // Update button states
+    prevBtn.disabled = currentExercisesPage <= 1;
+    nextBtn.disabled = currentExercisesPage >= totalPages;
+
+    // Update page info
+    if (exercisesPaginatedList.length === 0) {
+        pageInfo.textContent = "No exercises";
+    } else {
+        const startIdx = (currentExercisesPage - 1) * EXERCISES_PER_PAGE + 1;
+        const endIdx = Math.min(currentExercisesPage * EXERCISES_PER_PAGE, exercisesPaginatedList.length);
+        pageInfo.textContent = `${startIdx}-${endIdx} of ${exercisesPaginatedList.length} (Page ${currentExercisesPage}/${totalPages})`;
+    }
 }
 
 function displayExercises(dateStr) {

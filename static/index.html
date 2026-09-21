@@ -355,7 +355,14 @@
 
                     <!-- All Exercises List -->
                     <div id="exercises-for-date" class="exercises-section">
-                        <h3 id="exercises-title">All Exercises</h3>
+                        <div class="exercises-header">
+                            <h3 id="exercises-title">All Exercises</h3>
+                            <div class="exercises-pagination">
+                                <button id="exercises-prev-btn" class="pagination-btn" title="Previous page">← Previous</button>
+                                <span id="exercises-page-info" class="page-info">Page 1</span>
+                                <button id="exercises-next-btn" class="pagination-btn" title="Next page">Next →</button>
+                            </div>
+                        </div>
                         <div id="exercises-list" class="exercises-list">
                             <div class="loading">Loading exercises...</div>
                         </div>

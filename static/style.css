@@ -2040,8 +2040,65 @@ body {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+.exercises-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.exercises-header h3 {
+    margin: 0;
+    color: #333;
+    font-size: 18px;
+    flex: 1;
+    min-width: 150px;
+}
+
+.exercises-pagination {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.pagination-btn {
+    padding: 8px 14px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: #555;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.pagination-btn:hover:not(:disabled) {
+    border-color: #667eea;
+    color: #667eea;
+    background: #f0f4ff;
+}
+
+.pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    color: #999;
+}
+
+.page-info {
+    font-size: 13px;
+    color: #666;
+    font-weight: 500;
+    min-width: 80px;
+    text-align: center;
+}
+
 .exercises-section h3 {
-    margin: 0 0 15px 0;
+    margin: 0;
     color: #333;
     font-size: 18px;
 }
